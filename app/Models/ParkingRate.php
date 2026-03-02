@@ -49,13 +49,23 @@ class ParkingRate extends Model
      */
     public static function getCurrentRate(string $vehicleType, ?string $streetSection = null): ?float
     {
+        // First, try to get location-specific rate if street section is provided
+        if ($streetSection) {
+            $locationRate = self::where('vehicle_type', $vehicleType)
+                ->where('street_section', $streetSection)
+                ->where('effective_from', '<=', now())
+                ->orderBy('effective_from', 'DESC')
+                ->value('rate');
+            
+            if ($locationRate !== null) {
+                return $locationRate;
+            }
+        }
+        
+        // Fall back to default rate (where street_section is null)
         return self::where('vehicle_type', $vehicleType)
-            ->where(function ($query) use ($streetSection) {
-                $query->where('street_section', $streetSection)
-                      ->orWhereNull('street_section');
-            })
+            ->whereNull('street_section')
             ->where('effective_from', '<=', now())
-            ->orderBy('street_section', 'DESC')
             ->orderBy('effective_from', 'DESC')
             ->value('rate');
     }
