@@ -45,6 +45,11 @@ class TransactionObserver
                 request()
             );
 
+            // Trigger notifications if created with success status
+            if ($transaction->payment_status === 'success') {
+                $this->handleSuccessfulPayment($transaction);
+            }
+
             Log::info('Transaction created', [
                 'transaction_id' => $transaction->transaction_id,
                 'amount' => $transaction->amount,

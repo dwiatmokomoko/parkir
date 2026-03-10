@@ -8,6 +8,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ParkingAttendantController;
 use App\Http\Controllers\AuditController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -93,4 +94,12 @@ Route::middleware('admin')->prefix('rates')->group(function () {
 Route::middleware('admin')->prefix('audit-logs')->group(function () {
     Route::get('/', [AuditController::class, 'index']);
     Route::get('/search', [AuditController::class, 'search']);
+});
+
+// Notification Routes
+Route::middleware('attendant')->prefix('attendant/notifications')->group(function () {
+    Route::get('/', [NotificationController::class, 'index']);
+    Route::get('/unread', [NotificationController::class, 'getUnread']);
+    Route::post('/{notificationId}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
 });
