@@ -6,6 +6,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ParkingAttendantController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -68,4 +69,14 @@ Route::middleware('admin')->prefix('reports')->group(function () {
     Route::post('/generate', [ReportController::class, 'generate']);
     Route::get('/{reportId}/status', [ReportController::class, 'status']);
     Route::get('/{reportId}/download', [ReportController::class, 'download']);
+});
+
+// Parking Attendant Routes
+Route::middleware('admin')->prefix('attendants')->group(function () {
+    Route::get('/', [ParkingAttendantController::class, 'index']);
+    Route::post('/', [ParkingAttendantController::class, 'store']);
+    Route::get('/{id}', [ParkingAttendantController::class, 'show']);
+    Route::put('/{id}', [ParkingAttendantController::class, 'update']);
+    Route::post('/{id}/activate', [ParkingAttendantController::class, 'activate']);
+    Route::post('/{id}/deactivate', [ParkingAttendantController::class, 'deactivate']);
 });
