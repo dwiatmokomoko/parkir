@@ -3,6 +3,7 @@
 use App\Http\Controllers\AttendantAuthController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\TransactionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -40,4 +41,12 @@ Route::prefix('payments')->group(function () {
     Route::post('/generate-qr', [PaymentController::class, 'generateQRCode']);
     Route::post('/callback', [PaymentController::class, 'handleCallback']);
     Route::post('/retry/{transactionId}', [PaymentController::class, 'retryPayment']);
+});
+
+// Transaction Routes
+Route::prefix('transactions')->group(function () {
+    Route::get('/', [TransactionController::class, 'index']);
+    Route::get('/{id}', [TransactionController::class, 'show']);
+    Route::get('/location/{streetSection}', [TransactionController::class, 'getByLocation']);
+    Route::get('/attendant/{attendantId}', [TransactionController::class, 'getByAttendant']);
 });

@@ -343,26 +343,19 @@ class TransactionProcessingPropertyTest extends TestCase
                 'payment_status' => 'pending',
             ]);
             
-            // Simulate payment failure and log it
+            // Clear audit logs to focus on the update
+            AuditLog::query()->delete();
+            
+            // Simulate payment failure - this triggers the observer
             $transaction->update([
                 'payment_status' => 'failed',
                 'failure_reason' => 'Payment declined',
             ]);
             
-            // Create audit log
-            AuditLog::create([
-                'action' => 'transaction_status_updated',
-                'entity_type' => 'transaction',
-                'entity_id' => $transaction->id,
-                'old_values' => ['payment_status' => 'pending'],
-                'new_values' => ['payment_status' => 'failed'],
-                'created_at' => Carbon::now(),
-            ]);
-            
-            // Verify audit log was created
+            // Verify audit log was created by the observer
             $auditLog = AuditLog::where('entity_id', $transaction->id)->first();
             $this->assertNotNull($auditLog, 'Failed transaction must be logged');
-            $this->assertEquals('transaction_status_updated', $auditLog->action, 'Log action must be transaction_status_updated');
+            $this->assertEquals('transaction_updated', $auditLog->action, 'Log action must be transaction_updated');
             $this->assertEquals('failed', $auditLog->new_values['payment_status'], 'Log must record failed status');
         });
     }
