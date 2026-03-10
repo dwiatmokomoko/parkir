@@ -4,6 +4,7 @@ use App\Http\Controllers\AttendantAuthController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -49,4 +50,14 @@ Route::prefix('transactions')->group(function () {
     Route::get('/{id}', [TransactionController::class, 'show']);
     Route::get('/location/{streetSection}', [TransactionController::class, 'getByLocation']);
     Route::get('/attendant/{attendantId}', [TransactionController::class, 'getByAttendant']);
+});
+
+// Dashboard Routes
+Route::prefix('dashboard')->group(function () {
+    Route::get('/', [DashboardController::class, 'index']);
+    Route::get('/daily-revenue', [DashboardController::class, 'getDailyRevenue']);
+    Route::get('/monthly-revenue', [DashboardController::class, 'getMonthlyRevenue']);
+    Route::get('/location-stats', [DashboardController::class, 'getLocationStats']);
+    Route::get('/attendant-stats', [DashboardController::class, 'getAttendantStats']);
+    Route::get('/vehicle-stats', [DashboardController::class, 'getVehicleStats']);
 });
