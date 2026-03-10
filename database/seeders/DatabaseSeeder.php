@@ -16,6 +16,9 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             ParkingAttendantSeeder::class,
             ParkingRateSeeder::class,
+            TransactionSeeder::class,
+            AuditLogSeeder::class,
+            NotificationSeeder::class,
         ]);
     }
 }

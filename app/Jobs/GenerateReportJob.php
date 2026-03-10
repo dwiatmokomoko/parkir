@@ -21,6 +21,30 @@ class GenerateReportJob implements ShouldQueue
     protected Report $report;
 
     /**
+     * The number of times the job may be attempted.
+     *
+     * @var int
+     */
+    public $tries = 3;
+
+    /**
+     * The maximum number of seconds the job can run.
+     *
+     * @var int
+     */
+    public $timeout = 300;
+
+    /**
+     * Calculate the number of seconds to wait before retrying the job.
+     *
+     * @return array<int, int>
+     */
+    public function backoff(): array
+    {
+        return [10, 60, 300]; // Exponential backoff: 10s, 60s, 300s
+    }
+
+    /**
      * Create a new job instance.
      */
     public function __construct(Report $report)

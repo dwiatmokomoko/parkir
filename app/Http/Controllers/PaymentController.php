@@ -162,6 +162,15 @@ class PaymentController extends Controller
         try {
             $notification = $request->all();
 
+            // Verify webhook signature using MidtransService
+            if (!$this->midtransService->verifyWebhookSignature($notification)) {
+                Log::warning('Invalid webhook signature', ['notification' => $notification]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid webhook signature',
+                ], 401);
+            }
+
             // Process webhook
             $result = $this->webhookService->processWebhook($notification);
 
@@ -174,6 +183,36 @@ class PaymentController extends Controller
 
             $transaction = $result['transaction'];
             $newStatus = $result['new_status'];
+
+            // Idempotency check - prevent duplicate processing
+            if ($transaction->payment_status === $newStatus) {
+                Log::info('Duplicate webhook notification - already processed', [
+                    'transaction_id' => $transaction->transaction_id,
+                    'status' => $newStatus,
+                ]);
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Webhook already processed',
+                ]);
+            }
+
+            // Validate transaction amount matches expected rate
+            $expectedAmount = ParkingRate::getCurrentRate(
+                $transaction->vehicle_type,
+                $transaction->street_section
+            );
+            
+            if (!$this->midtransService->validateTransactionAmount($transaction, $expectedAmount)) {
+                Log::error('Transaction amount mismatch', [
+                    'transaction_id' => $transaction->transaction_id,
+                    'expected' => $expectedAmount,
+                    'actual' => $transaction->amount,
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Transaction amount mismatch',
+                ], 400);
+            }
 
             // Update transaction status
             DB::transaction(function () use ($transaction, $newStatus, $notification) {

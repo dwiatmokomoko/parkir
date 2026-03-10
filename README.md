@@ -2,6 +2,19 @@
 
 Sistem Monitoring Pembayaran Parkir adalah platform berbasis payment gateway yang dirancang untuk mencatat, memproses, dan memantau transaksi pembayaran parkir non-tunai secara real-time.
 
+## Fitur Utama
+
+- ✅ Integrasi Payment Gateway (Midtrans)
+- ✅ Pembuatan QR Code untuk pembayaran
+- ✅ Dashboard monitoring real-time
+- ✅ Manajemen juru parkir
+- ✅ Konfigurasi tarif parkir
+- ✅ Laporan transaksi (PDF/Excel)
+- ✅ Audit logging lengkap
+- ✅ Notifikasi real-time
+- ✅ Property-based testing
+- ✅ Enkripsi data sensitif
+
 ## Tech Stack
 
 - **Backend**: Laravel 10.x (PHP 8.2+)
@@ -12,42 +25,338 @@ Sistem Monitoring Pembayaran Parkir adalah platform berbasis payment gateway yan
 - **Excel Export**: Laravel Excel (PhpSpreadsheet)
 - **Property-Based Testing**: Eris
 - **Cache & Queue**: Redis
+- **Web Server**: Nginx
+- **Process Manager**: Supervisor
 
 ## Requirements
 
 - PHP 8.2 or higher
 - Composer
-- Node.js & NPM
+- Node.js 18+ & NPM
 - PostgreSQL 15+
-- Redis
+- Redis 6+
+- Nginx
+- Supervisor (untuk production)
 
 ## Installation
 
-1. Clone the repository
+### 1. Clone Repository
+
 ```bash
 git clone <repository-url>
 cd parking-payment-system
 ```
 
-2. Install PHP dependencies
-```bash
-composer install
-```
+### 2. Install Dependencies
 
-3. Install Node dependencies
 ```bash
+# PHP dependencies
+composer install
+
+# Node dependencies
 npm install
 ```
 
-4. Copy environment file
-```bash
-cp .env.example .env
-```
+### 3. Environment Configuration
 
-5. Generate application key
 ```bash
+# Copy environment file
+cp .env.example .env
+
+# Generate application key
 php artisan key:generate
 ```
+
+### 4. Database Setup
+
+```bash
+# Create database
+createdb parking_payment_db
+
+# Run migrations
+php artisan migrate
+
+# Seed initial data
+php artisan db:seed
+```
+
+### 5. Build Frontend Assets
+
+```bash
+npm run build
+```
+
+### 6. Start Development Server
+
+```bash
+# Terminal 1: Start Laravel development server
+php artisan serve
+
+# Terminal 2: Start Vite development server
+npm run dev
+
+# Terminal 3: Start queue worker
+php artisan queue:work
+```
+
+## Configuration
+
+### Environment Variables
+
+Key environment variables to configure:
+
+```env
+# Application
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost:8000
+
+# Database
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=parking_payment_db
+DB_USERNAME=postgres
+DB_PASSWORD=
+
+# Redis
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+
+# Midtrans
+MIDTRANS_SERVER_KEY=your-server-key
+MIDTRANS_CLIENT_KEY=your-client-key
+MIDTRANS_IS_PRODUCTION=false
+
+# Session
+ADMIN_SESSION_LIFETIME=30
+ATTENDANT_SESSION_LIFETIME=15
+```
+
+## Usage
+
+### Admin Dashboard
+
+1. Access: `http://localhost:8000/login`
+2. Login dengan credentials admin
+3. Akses dashboard untuk monitoring transaksi
+
+### Juru Parkir Interface
+
+1. Access: `http://localhost:8000/attendant/login`
+2. Login dengan nomor registrasi dan PIN
+3. Buat QR code untuk pembayaran parkir
+
+## Testing
+
+### Run All Tests
+
+```bash
+php artisan test
+```
+
+### Run Unit Tests
+
+```bash
+php artisan test --testsuite=Unit
+```
+
+### Run Feature Tests
+
+```bash
+php artisan test --testsuite=Feature
+```
+
+### Run Property-Based Tests
+
+```bash
+php artisan test --filter PropertyTest
+```
+
+### Generate Coverage Report
+
+```bash
+php artisan test --coverage
+```
+
+## API Documentation
+
+Lihat [API_ROUTES_DOCUMENTATION.md](API_ROUTES_DOCUMENTATION.md) untuk dokumentasi lengkap API endpoints.
+
+## User Documentation
+
+- [Admin User Guide](USER_GUIDE_ADMIN.md) - Panduan untuk admin Dishub
+- [Attendant User Guide](USER_GUIDE_ATTENDANT.md) - Panduan untuk juru parkir
+
+## Technical Documentation
+
+Lihat [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md) untuk dokumentasi teknis sistem.
+
+## Deployment
+
+Lihat [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) untuk panduan deployment ke production.
+
+## Project Structure
+
+```
+parking-payment-system/
+├── app/
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   ├── Middleware/
+│   │   └── Requests/
+│   ├── Models/
+│   ├── Services/
+│   ├── Jobs/
+│   ├── Observers/
+│   └── Repositories/
+├── database/
+│   ├── migrations/
+│   ├── seeders/
+│   └── factories/
+├── resources/
+│   ├── views/
+│   ├── css/
+│   └── js/
+├── routes/
+│   ├── api.php
+│   └── web.php
+├── tests/
+│   ├── Feature/
+│   ├── Unit/
+│   └── Generators/
+├── config/
+├── storage/
+├── public/
+└── bootstrap/
+```
+
+## Database Schema
+
+### Main Tables
+
+- **users**: Admin Dishub
+- **parking_attendants**: Juru parkir
+- **parking_rates**: Tarif parkir
+- **transactions**: Transaksi pembayaran
+- **audit_logs**: Audit trail
+- **notifications**: Notifikasi
+- **reports**: Generated reports
+
+Lihat [TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md) untuk ERD lengkap.
+
+## Security
+
+### Implemented Security Measures
+
+- ✅ HTTPS/TLS encryption
+- ✅ Password hashing (bcrypt)
+- ✅ Session management dengan timeout
+- ✅ CSRF protection
+- ✅ XSS prevention
+- ✅ SQL injection prevention
+- ✅ Rate limiting
+- ✅ Audit logging
+- ✅ Data encryption at rest
+- ✅ Webhook signature verification
+
+## Performance
+
+### Optimization Techniques
+
+- Database indexing
+- Query caching dengan Redis
+- Session caching
+- Asset minification
+- Lazy loading
+- Connection pooling
+- Gzip compression
+
+### Performance Targets
+
+- API response time: < 200ms
+- Dashboard load time: < 2s
+- Report generation: < 10s (untuk 10,000 transactions)
+- Concurrent users: 100+
+
+## Monitoring & Logging
+
+### Logging
+
+- Application logs: `/storage/logs/`
+- Daily rotation
+- 30 days retention
+- Log level: debug (development), warning (production)
+
+### Monitoring
+
+- Database query monitoring
+- Application performance monitoring (optional: Sentry)
+- Error tracking
+- Health checks
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Database Connection Error**
+   - Check PostgreSQL is running
+   - Verify database credentials in .env
+   - Check database exists
+
+2. **Queue Workers Not Processing**
+   - Check Redis is running
+   - Verify queue connection in .env
+   - Check supervisor status (production)
+
+3. **Payment Gateway Integration Issues**
+   - Verify Midtrans credentials
+   - Check webhook configuration
+   - Test with sandbox environment first
+
+Lihat [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) untuk troubleshooting lebih lengkap.
+
+## Contributing
+
+1. Create feature branch: `git checkout -b feature/your-feature`
+2. Commit changes: `git commit -am 'Add your feature'`
+3. Push to branch: `git push origin feature/your-feature`
+4. Submit pull request
+
+## Code Standards
+
+- Follow PSR-12 coding standards
+- Use meaningful variable and function names
+- Add comments untuk complex logic
+- Write tests untuk new features
+- Run linter: `php artisan pint`
+
+## Support
+
+- **Email**: support@dishub.go.id
+- **Telepon**: 021-1234567
+- **Jam Kerja**: Senin-Jumat, 08:00-17:00 WIB
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Changelog
+
+### Version 1.0 (2024-01-15)
+
+- Initial release
+- Core payment processing
+- Admin dashboard
+- Juru parkir interface
+- Reporting system
+- Audit logging
+- Property-based testing
+
+---
+
+**Last Updated**: 2024-01-15
+**Version**: 1.0
 
 6. Configure your `.env` file:
    - Set PostgreSQL database credentials

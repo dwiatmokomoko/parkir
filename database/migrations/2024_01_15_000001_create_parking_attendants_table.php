@@ -17,9 +17,9 @@ return new class extends Migration
             $table->string('name');
             $table->string('street_section');
             $table->string('location_side', 50)->nullable();
-            $table->string('bank_account_number', 50)->nullable();
+            $table->text('bank_account_number')->nullable(); // Changed to text for encrypted data
             $table->string('bank_name', 100)->nullable();
-            $table->string('pin');
+            $table->text('pin'); // Changed to text for encrypted data
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             

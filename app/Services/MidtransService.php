@@ -7,6 +7,7 @@ use Midtrans\Config;
 use Midtrans\Snap;
 use Midtrans\Transaction as MidtransTransaction;
 use Midtrans\Notification;
+use Illuminate\Support\Facades\Log;
 
 class MidtransService
 {
@@ -83,7 +84,63 @@ class MidtransService
     }
 
     /**
-     * Handle webhook notification from Midtrans
+     * Verify webhook signature from Midtrans
+     *
+     * @param array $notificationData
+     * @return bool True if signature is valid
+     */
+    public function verifyWebhookSignature(array $notificationData): bool
+    {
+        $orderId = $notificationData['order_id'] ?? null;
+        $statusCode = $notificationData['status_code'] ?? null;
+        $grossAmount = $notificationData['gross_amount'] ?? null;
+        $signatureKey = $notificationData['signature_key'] ?? null;
+
+        if (!$orderId || !$statusCode || !$grossAmount || !$signatureKey) {
+            Log::warning('Invalid webhook notification data', $notificationData);
+            return false;
+        }
+
+        // Calculate expected signature
+        $serverKey = config('midtrans.server_key');
+        $expectedSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
+
+        // Compare signatures
+        if (!hash_equals($expectedSignature, $signatureKey)) {
+            Log::warning('Webhook signature verification failed', [
+                'order_id' => $orderId,
+                'expected' => $expectedSignature,
+                'received' => $signatureKey,
+            ]);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Validate transaction amount matches expected rate
+     *
+     * @param Transaction $transaction
+     * @param float $expectedAmount
+     * @return bool True if amount matches
+     */
+    public function validateTransactionAmount(Transaction $transaction, float $expectedAmount): bool
+    {
+        if ((float) $transaction->amount !== $expectedAmount) {
+            Log::warning('Transaction amount mismatch', [
+                'transaction_id' => $transaction->transaction_id,
+                'expected' => $expectedAmount,
+                'actual' => $transaction->amount,
+            ]);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Handle webhook notification from Midtrans with idempotency
      *
      * @param array $notificationData
      * @return array Processed notification data
@@ -91,7 +148,23 @@ class MidtransService
      */
     public function handleNotification(array $notificationData): array
     {
+        // Verify webhook signature first
+        if (!$this->verifyWebhookSignature($notificationData)) {
+            throw new \Exception('Invalid webhook signature');
+        }
+
         $notification = new Notification();
+
+        // Check for idempotency - prevent duplicate processing
+        $orderId = $notification->order_id;
+        $transactionStatus = $notification->transaction_status;
+
+        // Log webhook for audit trail
+        Log::info('Webhook notification received', [
+            'order_id' => $orderId,
+            'transaction_status' => $transactionStatus,
+            'payment_type' => $notification->payment_type,
+        ]);
 
         return [
             'order_id' => $notification->order_id,

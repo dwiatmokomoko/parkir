@@ -27,5 +27,7 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="database"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <!-- Eris property-based testing configuration -->
+        <env name="ERIS_ITERATIONS" value="100"/>
     </php>
 </phpunit>

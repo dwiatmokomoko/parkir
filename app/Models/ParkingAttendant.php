@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Crypt;
 
 class ParkingAttendant extends Model
 {
@@ -32,6 +33,7 @@ class ParkingAttendant extends Model
      */
     protected $hidden = [
         'pin',
+        'bank_account_number',
     ];
 
     /**
@@ -42,6 +44,36 @@ class ParkingAttendant extends Model
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    /**
+     * Encrypt sensitive attributes before saving.
+     */
+    public function setAttribute($key, $value)
+    {
+        if (in_array($key, ['bank_account_number', 'pin']) && $value !== null) {
+            $value = Crypt::encryptString($value);
+        }
+        return parent::setAttribute($key, $value);
+    }
+
+    /**
+     * Decrypt sensitive attributes when retrieving.
+     */
+    public function getAttribute($key)
+    {
+        $value = parent::getAttribute($key);
+        
+        if (in_array($key, ['bank_account_number', 'pin']) && $value !== null) {
+            try {
+                $value = Crypt::decryptString($value);
+            } catch (\Exception $e) {
+                // If decryption fails, return the original value
+                // This handles cases where data wasn't encrypted
+            }
+        }
+        
+        return $value;
+    }
 
     /**
      * Get the transactions for the parking attendant.
