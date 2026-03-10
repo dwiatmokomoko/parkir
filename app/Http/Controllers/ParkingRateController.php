@@ -99,8 +99,10 @@ class ParkingRateController extends Controller
      */
     public function getByLocation(string $streetSection): JsonResponse
     {
-        $rates = ParkingRate::where('street_section', $streetSection)
-            ->orWhereNull('street_section')
+        $rates = ParkingRate::where(function ($query) use ($streetSection) {
+            $query->where('street_section', $streetSection)
+                  ->orWhereNull('street_section');
+        })
             ->where('effective_from', '<=', now())
             ->orderBy('street_section', 'DESC')
             ->orderBy('effective_from', 'DESC')

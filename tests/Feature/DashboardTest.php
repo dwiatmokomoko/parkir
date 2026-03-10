@@ -98,9 +98,9 @@ class DashboardTest extends TestCase
     {
         $attendant = $this->getTestAttendant();
         
-        // Create transaction in previous month
-        $lastMonth = Carbon::now()->subMonth();
-        Transaction::create([
+        // Create transaction in previous month using raw query to ensure created_at is set correctly
+        $lastMonth = Carbon::now()->subMonth()->startOfDay();
+        \DB::table('transactions')->insert([
             'transaction_id' => 'TRX-' . time() . '-' . uniqid(),
             'parking_attendant_id' => $attendant->id,
             'street_section' => 'Jl. Sudirman',
@@ -108,11 +108,12 @@ class DashboardTest extends TestCase
             'amount' => 5000,
             'payment_status' => 'success',
             'created_at' => $lastMonth,
+            'updated_at' => $lastMonth,
         ]);
         
         // Create transaction in current month
         $today = Carbon::now();
-        Transaction::create([
+        \DB::table('transactions')->insert([
             'transaction_id' => 'TRX-' . time() . '-' . uniqid(),
             'parking_attendant_id' => $attendant->id,
             'street_section' => 'Jl. Sudirman',
@@ -120,15 +121,17 @@ class DashboardTest extends TestCase
             'amount' => 10000,
             'payment_status' => 'success',
             'created_at' => $today,
+            'updated_at' => $today,
         ]);
         
         $response = $this->getJson('/api/dashboard');
         
         $response->assertStatus(200);
+        // Dashboard should only show current month's data
         $response->assertJson([
             'today_revenue' => 10000,
-            'month_revenue' => 10000,
             'today_transactions' => 1,
+            'month_revenue' => 10000,
             'month_transactions' => 1,
         ]);
     }
