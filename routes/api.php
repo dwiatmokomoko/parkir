@@ -7,6 +7,7 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ParkingAttendantController;
+use App\Http\Controllers\AuditController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -86,4 +87,10 @@ Route::middleware('admin')->prefix('rates')->group(function () {
     Route::get('/', [\App\Http\Controllers\ParkingRateController::class, 'index']);
     Route::put('/', [\App\Http\Controllers\ParkingRateController::class, 'update']);
     Route::get('/location/{streetSection}', [\App\Http\Controllers\ParkingRateController::class, 'getByLocation']);
+});
+
+// Audit Log Routes
+Route::middleware('admin')->prefix('audit-logs')->group(function () {
+    Route::get('/', [AuditController::class, 'index']);
+    Route::get('/search', [AuditController::class, 'search']);
 });
