@@ -49,24 +49,28 @@ class ParkingRate extends Model
      */
     public static function getCurrentRate(string $vehicleType, ?string $streetSection = null): ?float
     {
-        // First, try to get location-specific rate if street section is provided
+        $query = self::where('vehicle_type', $vehicleType)
+            ->where('effective_from', '<=', now());
+
+        // If street section is provided, prioritize location-specific rates
         if ($streetSection) {
-            $locationRate = self::where('vehicle_type', $vehicleType)
-                ->where('street_section', $streetSection)
-                ->where('effective_from', '<=', now())
-                ->orderBy('effective_from', 'DESC')
-                ->value('rate');
+            $query->where(function ($q) use ($streetSection) {
+                $q->where('street_section', $streetSection)
+                  ->orWhereNull('street_section');
+            });
             
-            if ($locationRate !== null) {
-                return $locationRate;
-            }
+            // Order by: location-specific first (street_section DESC), then by effective_from DESC
+            return $query
+                ->orderByRaw("CASE WHEN street_section IS NOT NULL THEN 0 ELSE 1 END")
+                ->orderByDesc('effective_from')
+                ->value('rate');
+        } else {
+            // If no street section, only get default rates (where street_section is null)
+            $query->whereNull('street_section');
+            
+            return $query
+                ->orderByDesc('effective_from')
+                ->value('rate');
         }
-        
-        // Fall back to default rate (where street_section is null)
-        return self::where('vehicle_type', $vehicleType)
-            ->whereNull('street_section')
-            ->where('effective_from', '<=', now())
-            ->orderBy('effective_from', 'DESC')
-            ->value('rate');
     }
 }

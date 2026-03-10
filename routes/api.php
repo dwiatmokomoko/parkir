@@ -80,3 +80,10 @@ Route::middleware('admin')->prefix('attendants')->group(function () {
     Route::post('/{id}/activate', [ParkingAttendantController::class, 'activate']);
     Route::post('/{id}/deactivate', [ParkingAttendantController::class, 'deactivate']);
 });
+
+// Parking Rate Routes
+Route::middleware('admin')->prefix('rates')->group(function () {
+    Route::get('/', [\App\Http\Controllers\ParkingRateController::class, 'index']);
+    Route::put('/', [\App\Http\Controllers\ParkingRateController::class, 'update']);
+    Route::get('/location/{streetSection}', [\App\Http\Controllers\ParkingRateController::class, 'getByLocation']);
+});
