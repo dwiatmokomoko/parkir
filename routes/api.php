@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -60,4 +61,11 @@ Route::prefix('dashboard')->group(function () {
     Route::get('/location-stats', [DashboardController::class, 'getLocationStats']);
     Route::get('/attendant-stats', [DashboardController::class, 'getAttendantStats']);
     Route::get('/vehicle-stats', [DashboardController::class, 'getVehicleStats']);
+});
+
+// Report Routes
+Route::middleware('admin')->prefix('reports')->group(function () {
+    Route::post('/generate', [ReportController::class, 'generate']);
+    Route::get('/{reportId}/status', [ReportController::class, 'status']);
+    Route::get('/{reportId}/download', [ReportController::class, 'download']);
 });
