@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AttendantAuthController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PaymentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -32,4 +33,11 @@ Route::prefix('attendant/auth')->group(function () {
     Route::post('/login', [AttendantAuthController::class, 'login']);
     Route::post('/logout', [AttendantAuthController::class, 'logout']);
     Route::get('/check', [AttendantAuthController::class, 'checkSession']);
+});
+
+// Payment Routes
+Route::prefix('payments')->group(function () {
+    Route::post('/generate-qr', [PaymentController::class, 'generateQRCode']);
+    Route::post('/callback', [PaymentController::class, 'handleCallback']);
+    Route::post('/retry/{transactionId}', [PaymentController::class, 'retryPayment']);
 });
