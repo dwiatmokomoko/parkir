@@ -50,9 +50,16 @@ class ParkingAttendant extends Model
      */
     public function setAttribute($key, $value)
     {
-        if (in_array($key, ['bank_account_number', 'pin']) && $value !== null) {
+        // Only encrypt bank_account_number, not PIN (PIN should be hashed)
+        if ($key === 'bank_account_number' && $value !== null) {
             $value = Crypt::encryptString($value);
         }
+        
+        // Hash PIN if it's being set and not already hashed
+        if ($key === 'pin' && $value !== null && !str_starts_with($value, '$2y$')) {
+            $value = \Illuminate\Support\Facades\Hash::make($value);
+        }
+        
         return parent::setAttribute($key, $value);
     }
 
@@ -63,12 +70,12 @@ class ParkingAttendant extends Model
     {
         $value = parent::getAttribute($key);
         
-        if (in_array($key, ['bank_account_number', 'pin']) && $value !== null) {
+        // Only decrypt bank_account_number, not PIN
+        if ($key === 'bank_account_number' && $value !== null) {
             try {
                 $value = Crypt::decryptString($value);
             } catch (\Exception $e) {
                 // If decryption fails, return the original value
-                // This handles cases where data wasn't encrypted
             }
         }
         
