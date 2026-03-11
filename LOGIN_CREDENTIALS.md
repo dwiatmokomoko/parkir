@@ -16,7 +16,37 @@
 
 ## Parking Attendant Accounts
 
-Attendant accounts dibuat melalui admin panel. Default password untuk attendant yang dibuat via seeder adalah `password123`.
+Default attendant accounts dari seeder:
+
+### Juru Parkir 1
+- **Registration Number**: `JP001`
+- **PIN**: `1234`
+- **Name**: Budi Santoso
+- **Location**: Jl. Sudirman - Depan Gedung A
+
+### Juru Parkir 2
+- **Registration Number**: `JP002`
+- **PIN**: `1234`
+- **Name**: Siti Aminah
+- **Location**: Jl. Thamrin - Depan Mall
+
+### Juru Parkir 3
+- **Registration Number**: `JP003`
+- **PIN**: `1234`
+- **Name**: Ahmad Yani
+- **Location**: Jl. Gatot Subroto - Depan Kantor
+
+### Juru Parkir 4
+- **Registration Number**: `JP004`
+- **PIN**: `1234`
+- **Name**: Dewi Lestari
+- **Location**: Jl. Sudirman - Depan Gedung B
+
+### Juru Parkir 5
+- **Registration Number**: `JP005`
+- **PIN**: `1234`
+- **Name**: Eko Prasetyo
+- **Location**: Jl. Thamrin - Depan Hotel
 
 ## Akses Aplikasi
 
