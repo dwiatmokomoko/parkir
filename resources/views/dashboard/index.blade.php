@@ -3,7 +3,7 @@
 @section('title', 'Dashboard - Sistem Monitoring Pembayaran Parkir')
 
 @section('content')
-<div x-data="dashboard()" @load="init()" class="space-y-8">
+<div x-data="dashboard()" x-init="init()" class="space-y-8">
     <!-- Page Header -->
     <div>
         <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>

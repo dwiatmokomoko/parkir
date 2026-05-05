@@ -29,33 +29,89 @@ class DashboardController extends Controller
     public function index(): JsonResponse
     {
         $today = Carbon::now();
-        
+
         // Calculate today's revenue
         $todayRevenue = (float) Transaction::whereDate('created_at', $today)
             ->where('payment_status', 'success')
             ->sum('amount');
-        
+
         // Calculate this month's revenue
         $monthRevenue = (float) Transaction::whereYear('created_at', $today->year)
             ->whereMonth('created_at', $today->month)
             ->where('payment_status', 'success')
             ->sum('amount');
-        
+
         // Get total transactions today
         $todayTransactions = Transaction::whereDate('created_at', $today)->count();
-        
+
         // Get total transactions this month
         $monthTransactions = Transaction::whereYear('created_at', $today->year)
             ->whereMonth('created_at', $today->month)
             ->count();
-        
+
         // Get success rate
         $successRate = $this->statisticsService->getSuccessRate();
-        
+
         // Get payment status distribution
         $statusDistribution = $this->statisticsService->getPaymentStatusDistribution();
-        
+
+        $recentTransactions = Transaction::with('parkingAttendant')
+            ->latest()
+            ->limit(10)
+            ->get();
+
+        $dailyRevenue = collect($this->statisticsService->getDailyRevenue())
+            ->map(fn ($revenue, $date) => [
+                'date' => $date,
+                'revenue' => (float) $revenue,
+            ])
+            ->values();
+
+        $monthlyRevenue = collect($this->statisticsService->getMonthlyRevenue())
+            ->map(fn ($revenue, $month) => [
+                'month' => $month,
+                'revenue' => (float) $revenue,
+            ])
+            ->values();
+
+        $locationStats = collect($this->statisticsService->getTransactionCountByLocation())
+            ->map(fn ($count, $streetSection) => [
+                'street_section' => $streetSection,
+                'count' => (int) $count,
+            ])
+            ->values();
+
+        $vehicleStats = collect($this->statisticsService->getTransactionCountByVehicleType())
+            ->map(fn ($count, $vehicleType) => [
+                'vehicle_type' => $vehicleType,
+                'count' => (int) $count,
+            ])
+            ->values();
+
+        $paymentStatus = [
+            'success' => (int) ($statusDistribution['success'] ?? 0),
+            'pending' => (int) ($statusDistribution['pending'] ?? 0),
+            'failed' => (int) ($statusDistribution['failed'] ?? 0),
+            'expired' => (int) ($statusDistribution['expired'] ?? 0),
+        ];
+
         return response()->json([
+            'success' => true,
+            'summary' => [
+                'dailyRevenue' => $todayRevenue,
+                'monthlyRevenue' => $monthRevenue,
+                'totalTransactions' => $monthTransactions,
+                'todayTransactions' => $todayTransactions,
+                'successRate' => $successRate,
+            ],
+            'paymentStatus' => $paymentStatus,
+            'transactions' => $recentTransactions,
+            'dailyRevenue' => $dailyRevenue,
+            'monthlyRevenue' => $monthlyRevenue,
+            'locationStats' => $locationStats,
+            'vehicleStats' => $vehicleStats,
+
+            // Keep the original keys for existing consumers.
             'today_revenue' => $todayRevenue,
             'month_revenue' => $monthRevenue,
             'today_transactions' => $todayTransactions,
