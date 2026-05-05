@@ -67,25 +67,33 @@
         <!-- Daily Revenue Chart -->
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Pendapatan Harian (30 Hari Terakhir)</h3>
-            <canvas id="dailyRevenueChart" height="300"></canvas>
+            <div class="relative h-72 sm:h-80">
+                <canvas id="dailyRevenueChart" class="absolute inset-0 h-full w-full"></canvas>
+            </div>
         </div>
 
         <!-- Monthly Revenue Chart -->
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Pendapatan Bulanan (12 Bulan Terakhir)</h3>
-            <canvas id="monthlyRevenueChart" height="300"></canvas>
+            <div class="relative h-72 sm:h-80">
+                <canvas id="monthlyRevenueChart" class="absolute inset-0 h-full w-full"></canvas>
+            </div>
         </div>
 
         <!-- Location Distribution Chart -->
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Distribusi Transaksi per Lokasi</h3>
-            <canvas id="locationChart" height="300"></canvas>
+            <div class="relative h-72 sm:h-80">
+                <canvas id="locationChart" class="absolute inset-0 h-full w-full"></canvas>
+            </div>
         </div>
 
         <!-- Vehicle Type Distribution Chart -->
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Distribusi Transaksi per Jenis Kendaraan</h3>
-            <canvas id="vehicleChart" height="300"></canvas>
+            <div class="relative h-72 sm:h-80">
+                <canvas id="vehicleChart" class="absolute inset-0 h-full w-full"></canvas>
+            </div>
         </div>
     </div>
 
@@ -153,7 +161,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
-                    <template x-for="transaction in transactions" :key="transaction.id">
+                    <template x-for="transaction in paginatedTransactions" :key="transaction.id">
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 text-sm text-gray-900" x-text="transaction.transaction_id"></td>
                             <td class="px-6 py-4 text-sm text-gray-900" x-text="transaction.parking_attendant?.name || '-'"></td>
@@ -167,8 +175,44 @@
                             <td class="px-6 py-4 text-sm text-gray-600" x-text="formatDate(transaction.created_at)"></td>
                         </tr>
                     </template>
+                    <template x-if="transactions.length === 0">
+                        <tr>
+                            <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500">Belum ada transaksi</td>
+                        </tr>
+                    </template>
                 </tbody>
             </table>
+        </div>
+
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
+            <p class="text-sm text-gray-600">
+                Menampilkan
+                <span class="font-medium" x-text="transactionStart"></span>
+                -
+                <span class="font-medium" x-text="transactionEnd"></span>
+                dari
+                <span class="font-medium" x-text="transactions.length"></span>
+                transaksi
+            </p>
+            <div class="flex items-center gap-2">
+                <button
+                    @click="previousTransactionPage()"
+                    :disabled="transactionsPage === 1"
+                    class="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 disabled:text-gray-400 disabled:bg-gray-100 hover:bg-gray-50"
+                >
+                    Sebelumnya
+                </button>
+                <span class="px-3 py-2 text-sm text-gray-700">
+                    <span x-text="transactionsPage"></span> / <span x-text="totalTransactionPages"></span>
+                </span>
+                <button
+                    @click="nextTransactionPage()"
+                    :disabled="transactionsPage === totalTransactionPages"
+                    class="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 disabled:text-gray-400 disabled:bg-gray-100 hover:bg-gray-50"
+                >
+                    Berikutnya
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -188,12 +232,14 @@ function dashboard() {
             failed: 0,
         },
         transactions: [],
+        transactionsPage: 1,
+        transactionsPerPage: 10,
         charts: {},
         refreshInterval: null,
 
         async init() {
-            await this.loadDashboardData();
             this.initCharts();
+            await this.loadDashboardData();
             
             // Auto-refresh every 30 seconds
             this.refreshInterval = setInterval(() => {
@@ -215,6 +261,7 @@ function dashboard() {
                 this.summary = data.summary;
                 this.paymentStatus = data.paymentStatus;
                 this.transactions = data.transactions || [];
+                this.clampTransactionPage();
 
                 // Update charts
                 this.updateCharts(data);
@@ -225,6 +272,42 @@ function dashboard() {
 
         async refreshTransactions() {
             await this.loadDashboardData();
+        },
+
+        get totalTransactionPages() {
+            return Math.max(1, Math.ceil(this.transactions.length / this.transactionsPerPage));
+        },
+
+        get paginatedTransactions() {
+            const start = (this.transactionsPage - 1) * this.transactionsPerPage;
+            return this.transactions.slice(start, start + this.transactionsPerPage);
+        },
+
+        get transactionStart() {
+            if (this.transactions.length === 0) return 0;
+            return (this.transactionsPage - 1) * this.transactionsPerPage + 1;
+        },
+
+        get transactionEnd() {
+            return Math.min(this.transactionsPage * this.transactionsPerPage, this.transactions.length);
+        },
+
+        nextTransactionPage() {
+            if (this.transactionsPage < this.totalTransactionPages) {
+                this.transactionsPage++;
+            }
+        },
+
+        previousTransactionPage() {
+            if (this.transactionsPage > 1) {
+                this.transactionsPage--;
+            }
+        },
+
+        clampTransactionPage() {
+            if (this.transactionsPage > this.totalTransactionPages) {
+                this.transactionsPage = this.totalTransactionPages;
+            }
         },
 
         initCharts() {

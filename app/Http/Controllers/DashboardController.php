@@ -57,7 +57,7 @@ class DashboardController extends Controller
 
         $recentTransactions = Transaction::with('parkingAttendant')
             ->latest()
-            ->limit(10)
+            ->limit(50)
             ->get();
 
         $dailyRevenue = collect($this->statisticsService->getDailyRevenue())
