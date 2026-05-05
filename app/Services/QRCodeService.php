@@ -55,12 +55,12 @@ class QRCodeService
         $qrCodeUrl = data_get($transaction->midtrans_response, 'qr_code_url');
         $paymentUrl = data_get($transaction->midtrans_response, 'redirect_url');
 
-        if ($qrString) {
-            return $this->generateImageDataUri($qrString);
-        }
-
         if ($qrCodeUrl) {
             return $qrCodeUrl;
+        }
+
+        if ($qrString) {
+            return $this->generateImageDataUri($qrString);
         }
 
         return $this->generateImageDataUri($paymentUrl ?: $qrDataJson);
