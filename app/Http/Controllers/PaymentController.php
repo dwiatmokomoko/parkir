@@ -222,16 +222,13 @@ class PaymentController extends Controller
                 ]);
             }
 
-            // Validate transaction amount matches expected rate
-            $expectedAmount = ParkingRate::getCurrentRate(
-                $transaction->vehicle_type,
-                $transaction->street_section
-            );
+            // Validate Midtrans amount matches the stored transaction amount.
+            $expectedAmount = (float) ($notification['gross_amount'] ?? 0);
             
             if (!$this->midtransService->validateTransactionAmount($transaction, $expectedAmount)) {
                 Log::error('Transaction amount mismatch', [
                     'transaction_id' => $transaction->transaction_id,
-                    'expected' => $expectedAmount,
+                    'midtrans_gross_amount' => $expectedAmount,
                     'actual' => $transaction->amount,
                 ]);
                 return response()->json([

@@ -55,8 +55,12 @@ class WebhookService
      */
     public function isValidStatusTransition(string $currentStatus, string $newStatus): bool
     {
+        if ($currentStatus === $newStatus) {
+            return true;
+        }
+
         $validTransitions = [
-            'pending' => ['success', 'failed', 'expired'],
+            'pending' => ['pending', 'success', 'failed', 'expired'],
             'success' => [], // Success is final
             'failed' => ['pending'], // Can retry
             'expired' => ['pending'], // Can regenerate
@@ -165,7 +169,8 @@ class WebhookService
         return match ($transactionStatus) {
             'capture', 'settlement' => 'success',
             'pending' => 'pending',
-            'deny', 'cancel', 'expire' => 'failed',
+            'deny', 'cancel' => 'failed',
+            'expire' => 'expired',
             default => 'pending',
         };
     }
