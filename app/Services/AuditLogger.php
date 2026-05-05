@@ -39,7 +39,8 @@ class AuditLogger
                 $logData['user_type'] = 'admin';
             }
         } elseif ($user instanceof ParkingAttendant) {
-            $logData['user_id'] = $user->id;
+            $logData['entity_id'] = $data['entity_id'] ?? $user->id;
+            $logData['entity_type'] = $data['entity_type'] ?? 'attendant';
             // Only set user_type if not already provided in data
             if (!isset($data['user_type'])) {
                 $logData['user_type'] = 'attendant';

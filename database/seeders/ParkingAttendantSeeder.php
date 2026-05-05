@@ -67,7 +67,10 @@ class ParkingAttendantSeeder extends Seeder
         ];
 
         foreach ($attendants as $attendant) {
-            ParkingAttendant::create($attendant);
+            ParkingAttendant::updateOrCreate(
+                ['registration_number' => $attendant['registration_number']],
+                $attendant
+            );
         }
     }
 }

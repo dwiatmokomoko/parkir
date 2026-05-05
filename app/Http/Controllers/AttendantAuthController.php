@@ -7,6 +7,7 @@ use App\Models\ParkingAttendant;
 use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class AttendantAuthController extends Controller
@@ -57,6 +58,8 @@ class AttendantAuthController extends Controller
         }
 
         // Create session with 15-minute timeout
+        Auth::guard('attendant')->login($attendant);
+        $request->session()->regenerate();
         $request->session()->put('attendant_user_id', $attendant->id);
         $request->session()->put('attendant_last_activity', now()->timestamp);
 
@@ -99,6 +102,7 @@ class AttendantAuthController extends Controller
             }
         }
 
+        Auth::guard('attendant')->logout();
         $request->session()->forget(['attendant_user_id', 'attendant_last_activity']);
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -157,6 +161,33 @@ class AttendantAuthController extends Controller
                     'street_section' => $attendant->street_section,
                     'location_side' => $attendant->location_side,
                 ],
+            ],
+        ]);
+    }
+
+    /**
+     * Get authenticated attendant profile.
+     */
+    public function profile(Request $request): JsonResponse
+    {
+        $attendant = $request->authenticated_attendant
+            ?? ParkingAttendant::find($request->session()->get('attendant_user_id'));
+
+        if (!$attendant || !$attendant->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sesi tidak valid.',
+            ], 401);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $attendant->id,
+                'registration_number' => $attendant->registration_number,
+                'name' => $attendant->name,
+                'street_section' => $attendant->street_section,
+                'location_side' => $attendant->location_side,
             ],
         ]);
     }

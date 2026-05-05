@@ -4,6 +4,11 @@ namespace App\Services;
 
 use App\Models\Transaction;
 use Carbon\Carbon;
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel;
+use Endroid\QrCode\RoundBlockSizeMode;
+use Endroid\QrCode\Writer\PngWriter;
 
 class QRCodeService
 {
@@ -46,9 +51,19 @@ class QRCodeService
             'qr_code_data' => $qrDataJson,
         ]);
 
-        // Generate QR code image (using a simple base64 encoding for now)
-        // In production, you would use a QR code library like SimpleSoftwareIO/simple-qrcode
-        return base64_encode($qrDataJson);
+        $qrString = data_get($transaction->midtrans_response, 'qr_string');
+        $qrCodeUrl = data_get($transaction->midtrans_response, 'qr_code_url');
+        $paymentUrl = data_get($transaction->midtrans_response, 'redirect_url');
+
+        if ($qrString) {
+            return $this->generateImageDataUri($qrString);
+        }
+
+        if ($qrCodeUrl) {
+            return $qrCodeUrl;
+        }
+
+        return $this->generateImageDataUri($paymentUrl ?: $qrDataJson);
     }
 
     /**
@@ -60,9 +75,7 @@ class QRCodeService
     public function validate(string $qrCode): bool
     {
         try {
-            // Decode QR code
-            $qrDataJson = base64_decode($qrCode);
-            $qrData = json_decode($qrDataJson, true);
+            $qrData = $this->parseQRCode($qrCode);
 
             if (!$qrData) {
                 return false;
@@ -137,11 +150,42 @@ class QRCodeService
     public function parseQRCode(string $qrCode): ?array
     {
         try {
-            $qrDataJson = base64_decode($qrCode);
+            $qrDataJson = $qrCode;
+
+            if (str_starts_with($qrCode, 'data:image/')) {
+                return null;
+            }
+
+            if (!str_starts_with(ltrim($qrDataJson), '{')) {
+                $decoded = base64_decode($qrCode, true);
+                if ($decoded !== false) {
+                    $qrDataJson = $decoded;
+                }
+            }
+
             $qrData = json_decode($qrDataJson, true);
             return $qrData ?: null;
         } catch (\Exception $e) {
             return null;
         }
+    }
+
+    /**
+     * Generate a PNG data URI that can be used directly in an img src.
+     */
+    protected function generateImageDataUri(string $payload): string
+    {
+        $result = Builder::create()
+            ->writer(new PngWriter())
+            ->data($payload)
+            ->encoding(new Encoding('UTF-8'))
+            ->errorCorrectionLevel(ErrorCorrectionLevel::High)
+            ->size(300)
+            ->margin(12)
+            ->roundBlockSizeMode(RoundBlockSizeMode::Margin)
+            ->validateResult(false)
+            ->build();
+
+        return $result->getDataUri();
     }
 }

@@ -197,7 +197,7 @@ function qrGenerator() {
 
         async loadRates() {
             try {
-                const response = await fetch('/api/rates', {
+                const response = await fetch('/api/attendant/rates', {
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     }
@@ -208,8 +208,8 @@ function qrGenerator() {
                 const data = await response.json();
                 const rates = data.data || [];
 
-                const motorcycleRate = rates.find(r => r.vehicle_type === 'motorcycle' && !r.street_section);
-                const carRate = rates.find(r => r.vehicle_type === 'car' && !r.street_section);
+                const motorcycleRate = rates.find(r => r.vehicle_type === 'motorcycle');
+                const carRate = rates.find(r => r.vehicle_type === 'car');
 
                 this.rates.motorcycle = motorcycleRate?.rate || 0;
                 this.rates.car = carRate?.rate || 0;
@@ -292,7 +292,7 @@ function qrGenerator() {
                 }
 
                 const data = await response.json();
-                this.qrCode = data.qr_code;
+                this.qrCode = data.data?.qr_code || data.qr_code;
 
                 // Start expiration timer
                 this.startExpirationTimer();

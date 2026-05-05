@@ -41,6 +41,24 @@ class RouteServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting(): void
     {
+        RateLimiter::for('auth', function (Request $request) {
+            [$maxAttempts, $decayMinutes] = array_pad(
+                array_map('intval', explode(',', config('rate-limiting.rules.auth', '5,15'))),
+                2,
+                1
+            );
+
+            return Limit::perMinutes($decayMinutes, $maxAttempts)
+                ->by($request->ip())
+                ->response(function (Request $request, array $headers) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => config('rate-limiting.response.message'),
+                        'retry_after' => (int) ($headers['Retry-After'] ?? 0),
+                    ], 429, $headers);
+                });
+        });
+
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });

@@ -50,4 +50,27 @@ return [
     |
     */
     'is_3ds' => true,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Payment Mode
+    |--------------------------------------------------------------------------
+    |
+    | Use "qris" to generate dynamic QRIS codes that can be scanned directly
+    | from GoPay, ShopeePay, and QRIS-compatible banking apps. Use "snap" only
+    | if you want customers to open the Midtrans Snap checkout page first.
+    |
+    */
+    'payment_mode' => env('MIDTRANS_PAYMENT_MODE', 'qris'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notification URL
+    |--------------------------------------------------------------------------
+    |
+    | Public webhook URL that Midtrans calls when payment status changes.
+    | Leave empty to use APP_URL . /api/payments/callback.
+    |
+    */
+    'notification_url' => env('MIDTRANS_NOTIFICATION_URL'),
 ];

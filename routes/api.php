@@ -34,17 +34,23 @@ use Illuminate\Support\Facades\Route;
 // ============================================================================
 
 // Admin Authentication Routes (5 login attempts per 15 minutes)
-Route::prefix('auth')->middleware('throttle:5,15')->group(function () {
+Route::prefix('auth')->middleware('throttle:auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/check', [AuthController::class, 'checkSession']);
 });
 
 // Attendant Authentication Routes (5 login attempts per 15 minutes)
-Route::prefix('attendant/auth')->middleware('throttle:5,15')->group(function () {
+Route::prefix('attendant/auth')->middleware('throttle:auth')->group(function () {
     Route::post('/login', [AttendantAuthController::class, 'login']);
     Route::post('/logout', [AttendantAuthController::class, 'logout']);
     Route::get('/check', [AttendantAuthController::class, 'checkSession']);
+});
+
+// Authenticated attendant helper routes
+Route::prefix('attendant')->middleware('attendant')->group(function () {
+    Route::get('/profile', [AttendantAuthController::class, 'profile']);
+    Route::get('/rates', [ParkingRateController::class, 'attendantRates']);
 });
 
 // ============================================================================
@@ -54,7 +60,7 @@ Route::prefix('attendant/auth')->middleware('throttle:5,15')->group(function () 
 Route::prefix('payments')->group(function () {
     // Generate QR code (10 per minute per attendant)
     Route::post('/generate-qr', [PaymentController::class, 'generateQRCode'])
-        ->middleware('throttle:10,1');
+        ->middleware(['attendant', 'throttle:10,1']);
     
     // Midtrans webhook callback (no rate limiting)
     Route::post('/callback', [PaymentController::class, 'handleCallback']);

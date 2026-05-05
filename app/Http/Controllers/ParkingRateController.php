@@ -37,6 +37,37 @@ class ParkingRateController extends Controller
     }
 
     /**
+     * Get current parking rates for the authenticated attendant's location.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function attendantRates(Request $request): JsonResponse
+    {
+        $attendant = $request->authenticated_attendant;
+
+        if (!$attendant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sesi tidak valid. Silakan login kembali.',
+            ], 401);
+        }
+
+        $rates = collect(['motorcycle', 'car'])->map(function (string $vehicleType) use ($attendant) {
+            return [
+                'vehicle_type' => $vehicleType,
+                'street_section' => $attendant->street_section,
+                'rate' => ParkingRate::getCurrentRate($vehicleType, $attendant->street_section) ?? 0,
+            ];
+        })->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $rates,
+        ]);
+    }
+
+    /**
      * Update parking rates
      *
      * @param UpdateParkingRateRequest $request

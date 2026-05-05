@@ -24,7 +24,7 @@ class NotificationController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $attendantId = $request->user()->id;
+            $attendantId = $this->attendantId($request);
             $limit = $request->query('limit', 50);
 
             $notifications = $this->notificationService->getAttendantNotifications($attendantId, $limit);
@@ -53,7 +53,7 @@ class NotificationController extends Controller
     public function markAsRead(Request $request, int $notificationId): JsonResponse
     {
         try {
-            $attendantId = $request->user()->id;
+            $attendantId = $this->attendantId($request);
 
             // Verify notification belongs to attendant
             $notification = \App\Models\Notification::where('id', $notificationId)
@@ -99,7 +99,7 @@ class NotificationController extends Controller
     public function markAllAsRead(Request $request): JsonResponse
     {
         try {
-            $attendantId = $request->user()->id;
+            $attendantId = $this->attendantId($request);
             $count = $this->notificationService->markAllAsRead($attendantId);
 
             return response()->json([
@@ -125,7 +125,7 @@ class NotificationController extends Controller
     public function getUnread(Request $request): JsonResponse
     {
         try {
-            $attendantId = $request->user()->id;
+            $attendantId = $this->attendantId($request);
             $notifications = $this->notificationService->getUnreadNotifications($attendantId);
 
             return response()->json([
@@ -140,5 +140,10 @@ class NotificationController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    protected function attendantId(Request $request): int
+    {
+        return (int) ($request->authenticated_attendant?->id ?? $request->session()->get('attendant_user_id'));
     }
 }

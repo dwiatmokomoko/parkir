@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
@@ -63,6 +64,8 @@ class AuthController extends Controller
         ]);
 
         // Create session
+        Auth::guard('web')->login($user, (bool) $request->boolean('remember'));
+        $request->session()->regenerate();
         $request->session()->put('admin_user_id', $user->id);
         $request->session()->put('admin_last_activity', now()->timestamp);
 
@@ -104,6 +107,7 @@ class AuthController extends Controller
             }
         }
 
+        Auth::guard('web')->logout();
         $request->session()->forget(['admin_user_id', 'admin_last_activity']);
         $request->session()->invalidate();
         $request->session()->regenerateToken();

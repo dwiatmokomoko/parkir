@@ -48,11 +48,25 @@ class PaymentController extends Controller
             // Validate input
             $validated = $request->validate([
                 'vehicle_type' => 'required|in:motorcycle,car',
-                'attendant_id' => 'required|integer|exists:parking_attendants,id',
+                'attendant_id' => 'sometimes|integer|exists:parking_attendants,id',
+                'parking_attendant_id' => 'sometimes|integer|exists:parking_attendants,id',
             ]);
 
             // Get parking attendant
-            $attendant = ParkingAttendant::findOrFail($validated['attendant_id']);
+            $attendant = $request->authenticated_attendant;
+
+            if (!$attendant) {
+                $attendantId = $validated['attendant_id'] ?? $validated['parking_attendant_id'] ?? null;
+
+                if (!$attendantId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Sesi juru parkir tidak valid. Silakan login kembali.',
+                    ], 401);
+                }
+
+                $attendant = ParkingAttendant::findOrFail($attendantId);
+            }
 
             // Check if attendant is active
             if (!$attendant->is_active) {
@@ -95,7 +109,9 @@ class PaymentController extends Controller
 
             // Store Midtrans response
             $transaction->update([
-                'midtrans_transaction_id' => $midtransResponse['snap_token'] ?? null,
+                'midtrans_transaction_id' => $midtransResponse['midtrans_transaction_id']
+                    ?? $midtransResponse['snap_token']
+                    ?? null,
                 'midtrans_response' => $midtransResponse,
             ]);
 
@@ -121,11 +137,21 @@ class PaymentController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'QR code berhasil dibuat',
+                'transaction_id' => $transaction->transaction_id,
+                'qr_code' => $qrCode,
+                'amount' => $transaction->amount,
+                'vehicle_type' => $transaction->vehicle_type,
+                'payment_url' => $midtransResponse['redirect_url'] ?? null,
+                'qr_code_url' => $midtransResponse['qr_code_url'] ?? null,
+                'qris_acquirer' => $midtransResponse['acquirer'] ?? null,
                 'data' => [
                     'transaction_id' => $transaction->transaction_id,
                     'qr_code' => $qrCode,
                     'amount' => $transaction->amount,
                     'vehicle_type' => $transaction->vehicle_type,
+                    'payment_url' => $midtransResponse['redirect_url'] ?? null,
+                    'qr_code_url' => $midtransResponse['qr_code_url'] ?? null,
+                    'qris_acquirer' => $midtransResponse['acquirer'] ?? null,
                     'street_section' => $transaction->street_section,
                     'attendant_name' => $attendant->name,
                     'attendant_registration' => $attendant->registration_number,

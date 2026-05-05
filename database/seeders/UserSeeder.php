@@ -14,21 +14,25 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         // Create default admin account
-        User::create([
-            'name' => 'Admin Dishub',
-            'email' => 'admin@dishub.go.id',
-            'password' => Hash::make('password123'),
-            'role' => 'admin',
-            'is_active' => true,
-        ]);
+        User::updateOrCreate(
+            ['email' => 'admin@dishub.go.id'],
+            [
+                'name' => 'Admin Dishub',
+                'password' => Hash::make('password123'),
+                'role' => 'admin',
+                'is_active' => true,
+            ]
+        );
 
         // Create additional admin accounts for testing
-        User::create([
-            'name' => 'Admin Test',
-            'email' => 'admin.test@dishub.go.id',
-            'password' => Hash::make('password123'),
-            'role' => 'admin',
-            'is_active' => true,
-        ]);
+        User::updateOrCreate(
+            ['email' => 'admin.test@dishub.go.id'],
+            [
+                'name' => 'Admin Test',
+                'password' => Hash::make('password123'),
+                'role' => 'admin',
+                'is_active' => true,
+            ]
+        );
     }
 }

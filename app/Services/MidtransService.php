@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Transaction;
 use Midtrans\Config;
+use Midtrans\CoreApi;
 use Midtrans\Snap;
 use Midtrans\Transaction as MidtransTransaction;
 use Midtrans\Notification;
@@ -19,6 +20,7 @@ class MidtransService
         Config::$isProduction = config('midtrans.is_production');
         Config::$isSanitized = config('midtrans.is_sanitized');
         Config::$is3ds = config('midtrans.is_3ds');
+        Config::$overrideNotifUrl = config('midtrans.notification_url') ?: url('/api/payments/callback');
     }
 
     /**
@@ -30,6 +32,23 @@ class MidtransService
      */
     public function createTransaction(Transaction $transaction): array
     {
+        if ($this->shouldUseLocalMock()) {
+            return [
+                'payment_type' => 'qris',
+                'transaction_status' => 'pending',
+                'midtrans_transaction_id' => 'local-' . $transaction->transaction_id,
+                'snap_token' => null,
+                'redirect_url' => url('/local-payment/' . $transaction->transaction_id),
+                'qr_code_url' => null,
+                'qr_string' => $this->localQrString($transaction),
+                'acquirer' => 'local',
+            ];
+        }
+
+        if (config('midtrans.payment_mode') === 'qris') {
+            return $this->createQrisTransaction($transaction);
+        }
+
         $params = [
             'transaction_details' => [
                 'order_id' => $transaction->transaction_id,
@@ -57,9 +76,71 @@ class MidtransService
         $snapResponse = Snap::createTransaction($params);
 
         return [
+            'payment_type' => 'snap',
             'snap_token' => $snapResponse->token,
             'redirect_url' => $snapResponse->redirect_url,
         ];
+    }
+
+    /**
+     * Create a dynamic QRIS transaction that can be scanned directly.
+     */
+    protected function createQrisTransaction(Transaction $transaction): array
+    {
+        $response = CoreApi::charge([
+            'payment_type' => 'qris',
+            'transaction_details' => [
+                'order_id' => $transaction->transaction_id,
+                'gross_amount' => (int) $transaction->amount,
+            ],
+            'item_details' => [
+                [
+                    'id' => 'parking-fee',
+                    'price' => (int) $transaction->amount,
+                    'quantity' => 1,
+                    'name' => "Parkir {$transaction->vehicle_type} - {$transaction->street_section}",
+                ],
+            ],
+        ]);
+
+        $actions = collect($response->actions ?? []);
+        $qrCodeAction = $actions->firstWhere('name', 'generate-qr-code');
+
+        return [
+            'payment_type' => $response->payment_type ?? 'qris',
+            'transaction_status' => $response->transaction_status ?? 'pending',
+            'midtrans_transaction_id' => $response->transaction_id ?? null,
+            'snap_token' => null,
+            'redirect_url' => null,
+            'qr_code_url' => $qrCodeAction->url ?? null,
+            'qr_string' => $response->qr_string ?? null,
+            'acquirer' => $response->acquirer ?? null,
+            'raw_response' => $response,
+        ];
+    }
+
+    /**
+     * Use a local mock when Midtrans keys are still placeholders.
+     */
+    protected function shouldUseLocalMock(): bool
+    {
+        $serverKey = (string) config('midtrans.server_key', '');
+
+        return app()->environment(['local', 'testing'])
+            && ($serverKey === '' || str_contains($serverKey, 'your-server-key'));
+    }
+
+    /**
+     * Local QR payload for UI testing only. This is not payable.
+     */
+    protected function localQrString(Transaction $transaction): string
+    {
+        return json_encode([
+            'mode' => 'local-qris-mock',
+            'transaction_id' => $transaction->transaction_id,
+            'amount' => (int) $transaction->amount,
+            'vehicle_type' => $transaction->vehicle_type,
+        ]);
     }
 
     /**

@@ -19,8 +19,8 @@ return [
     */
 
     'rules' => [
-        // Authentication endpoints: 5 login attempts per 15 minutes per IP
-        'auth' => '5,15',
+        // Authentication endpoints per IP. Local default is higher for manual testing.
+        'auth' => env('AUTH_RATE_LIMIT', env('APP_ENV') === 'local' ? '60,1' : '5,15'),
 
         // QR code generation: 10 per minute per attendant
         'qr_generation' => '10,1',
