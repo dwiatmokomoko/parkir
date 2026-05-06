@@ -676,7 +676,6 @@ function dashboard() {
         },
 
         get paginatedTransactions() {
-            this.clampTransactionPage();
             const start = (this.transactionsPage - 1) * this.transactionsPerPage;
             return this.filteredTransactions.slice(start, start + this.transactionsPerPage);
         },
@@ -816,28 +815,14 @@ function dashboard() {
         },
 
         updateCharts(data) {
-            this.updateRevenueOrCountChart(this.charts.daily, data.dailyRevenue || [], 'date');
-            this.updateRevenueOrCountChart(this.charts.monthly, data.monthlyRevenue || [], 'month');
-            this.updateChart(this.charts.location, data.locationStats || [], 'street_section', 'count');
-            this.updateChart(this.charts.vehicle, data.vehicleStats || [], 'vehicle_type', 'count');
-        },
-
-        updateRevenueOrCountChart(chart, rows, labelKey) {
-            if (!chart) return;
-
-            const hasRevenue = rows.some((row) => Number(row.revenue || 0) > 0);
-            const valueKey = hasRevenue ? 'revenue' : 'count';
-
-            chart.data.datasets[0].label = hasRevenue ? 'Pendapatan' : 'Jumlah transaksi';
-            chart.data.labels = rows.map((row) => row[labelKey]);
-            chart.data.datasets[0].data = rows.map((row) => Number(row[valueKey] || 0));
-            chart.options.plugins.tooltip.callbacks.label = (context) => hasRevenue
-                ? 'Rp ' + Number(context.raw || 0).toLocaleString('id-ID')
-                : String(context.raw || 0) + ' transaksi';
-            chart.options.scales.y.ticks.callback = (value) => hasRevenue
-                ? 'Rp ' + Number(value).toLocaleString('id-ID')
-                : value;
-            chart.update('none');
+            try {
+                this.updateChart(this.charts.daily, data.dailyRevenue || [], 'date', 'revenue');
+                this.updateChart(this.charts.monthly, data.monthlyRevenue || [], 'month', 'revenue');
+                this.updateChart(this.charts.location, data.locationStats || [], 'street_section', 'count');
+                this.updateChart(this.charts.vehicle, data.vehicleStats || [], 'vehicle_type', 'count');
+            } catch (error) {
+                console.error('Error updating dashboard charts:', error);
+            }
         },
 
         updateChart(chart, rows, labelKey, valueKey) {
