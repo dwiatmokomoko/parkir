@@ -20,8 +20,8 @@ class QRCodeService
      */
     public function generate(Transaction $transaction): string
     {
-        // Set expiration time (15 minutes from now)
-        $expiresAt = Carbon::now()->addMinutes(15);
+        $expiryMinutes = max(1, min((int) config('midtrans.qris_expiry_minutes', 60), 60));
+        $expiresAt = Carbon::now()->addMinutes($expiryMinutes);
         
         // Update transaction with QR code timestamps
         $transaction->update([

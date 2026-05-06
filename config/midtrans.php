@@ -73,4 +73,16 @@ return [
     |
     */
     'notification_url' => env('MIDTRANS_NOTIFICATION_URL'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | QRIS Expiry
+    |--------------------------------------------------------------------------
+    |
+    | Dynamic QRIS should be paid before it expires. Sandbox testing is easier
+    | with a slightly longer window, while still staying under common QRIS
+    | provider limits.
+    |
+    */
+    'qris_expiry_minutes' => (int) env('MIDTRANS_QRIS_EXPIRY_MINUTES', 60),
 ];

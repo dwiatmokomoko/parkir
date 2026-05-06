@@ -65,6 +65,27 @@
                         <!-- QR Code Image -->
                         <img :src="qrCode" alt="QR Code" class="w-64 h-64 mx-auto mb-4">
 
+                        <template x-if="qrCodeUrl">
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-left">
+                                <p class="text-sm font-medium text-blue-900 mb-2">URL QRIS Sandbox</p>
+                                <div class="flex gap-2">
+                                    <input
+                                        type="text"
+                                        readonly
+                                        :value="qrCodeUrl"
+                                        class="flex-1 text-xs border border-blue-200 rounded px-3 py-2 bg-white text-blue-900"
+                                    >
+                                    <button
+                                        type="button"
+                                        @click="copyQrCodeUrl()"
+                                        class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-3 py-2 rounded"
+                                    >
+                                        Copy
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+
                         <!-- Attendant Info -->
                         <div class="bg-white rounded-lg p-4 mb-4 text-left">
                             <p class="text-sm text-gray-600">Nomor Registrasi</p>
@@ -173,6 +194,7 @@ function qrGenerator() {
             car: 0,
         },
         qrCode: null,
+        qrCodeUrl: null,
         attendantInfo: {},
         isGenerating: false,
         isExpired: false,
@@ -293,9 +315,10 @@ function qrGenerator() {
 
                 const data = await response.json();
                 this.qrCode = data.data?.qr_code || data.qr_code;
+                this.qrCodeUrl = data.data?.qr_code_url || data.qr_code_url || null;
 
                 // Start expiration timer
-                this.startExpirationTimer();
+                this.startExpirationTimer(data.data?.expires_at || data.expires_at);
             } catch (error) {
                 console.error('Error generating QR:', error);
                 alert('Terjadi kesalahan saat membuat QR code');
@@ -304,9 +327,26 @@ function qrGenerator() {
             }
         },
 
-        startExpirationTimer() {
-            this.expirationMinutes = 15;
-            this.expirationSeconds = 0;
+        async copyQrCodeUrl() {
+            if (!this.qrCodeUrl) return;
+
+            try {
+                await navigator.clipboard.writeText(this.qrCodeUrl);
+                alert('URL QRIS berhasil disalin');
+            } catch (error) {
+                console.error('Error copying QR URL:', error);
+            }
+        },
+
+        startExpirationTimer(expiresAt = null) {
+            if (expiresAt) {
+                const remainingSeconds = Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
+                this.expirationMinutes = Math.floor(remainingSeconds / 60);
+                this.expirationSeconds = remainingSeconds % 60;
+            } else {
+                this.expirationMinutes = 60;
+                this.expirationSeconds = 0;
+            }
 
             if (this.expirationTimer) {
                 clearInterval(this.expirationTimer);

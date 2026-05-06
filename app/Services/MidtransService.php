@@ -87,6 +87,8 @@ class MidtransService
      */
     protected function createQrisTransaction(Transaction $transaction): array
     {
+        $expiryMinutes = max(1, min((int) config('midtrans.qris_expiry_minutes', 60), 60));
+
         $response = CoreApi::charge([
             'payment_type' => 'qris',
             'transaction_details' => [
@@ -100,6 +102,10 @@ class MidtransService
                     'quantity' => 1,
                     'name' => "Parkir {$transaction->vehicle_type} - {$transaction->street_section}",
                 ],
+            ],
+            'custom_expiry' => [
+                'expiry_duration' => $expiryMinutes,
+                'unit' => 'minute',
             ],
         ]);
 
