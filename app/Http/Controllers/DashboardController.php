@@ -66,13 +66,19 @@ class DashboardController extends Controller
             $dailyRevenue = collect(range(29, 0))
                 ->map(function (int $daysAgo) {
                     $date = Carbon::now()->subDays($daysAgo);
+                    $revenue = (float) Transaction::whereDate('created_at', $date)
+                        ->where('payment_status', 'success')
+                        ->sum('amount');
+                    $count = Transaction::whereDate('created_at', $date)->count();
 
                     return [
                         'date' => $date->format('Y-m-d'),
-                        'revenue' => (float) Transaction::whereDate('created_at', $date)
-                            ->where('payment_status', 'success')
-                            ->sum('amount'),
-                        'count' => Transaction::whereDate('created_at', $date)->count(),
+                        'label' => $date->format('d/m'),
+                        'revenue' => $revenue,
+                        'count' => $count,
+                        'chart_value' => $revenue > 0 ? $revenue : $count,
+                        'chart_label' => $revenue > 0 ? 'Pendapatan' : 'Jumlah Transaksi',
+                        'chart_type' => $revenue > 0 ? 'money' : 'count',
                     ];
                 })
                 ->values();
@@ -80,16 +86,22 @@ class DashboardController extends Controller
             $monthlyRevenue = collect(range(11, 0))
                 ->map(function (int $monthsAgo) {
                     $date = Carbon::now()->subMonths($monthsAgo);
+                    $revenue = (float) Transaction::whereYear('created_at', $date->year)
+                        ->whereMonth('created_at', $date->month)
+                        ->where('payment_status', 'success')
+                        ->sum('amount');
+                    $count = Transaction::whereYear('created_at', $date->year)
+                        ->whereMonth('created_at', $date->month)
+                        ->count();
 
                     return [
                         'month' => $date->format('Y-m'),
-                        'revenue' => (float) Transaction::whereYear('created_at', $date->year)
-                            ->whereMonth('created_at', $date->month)
-                            ->where('payment_status', 'success')
-                            ->sum('amount'),
-                        'count' => Transaction::whereYear('created_at', $date->year)
-                            ->whereMonth('created_at', $date->month)
-                            ->count(),
+                        'label' => $date->format('M Y'),
+                        'revenue' => $revenue,
+                        'count' => $count,
+                        'chart_value' => $revenue > 0 ? $revenue : $count,
+                        'chart_label' => $revenue > 0 ? 'Pendapatan' : 'Jumlah Transaksi',
+                        'chart_type' => $revenue > 0 ? 'money' : 'count',
                     ];
                 })
                 ->values();

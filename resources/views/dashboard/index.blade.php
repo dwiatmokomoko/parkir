@@ -428,7 +428,7 @@
             <div class="dash-panel-header">
                 <div>
                     <h2 class="dash-panel-title">Pendapatan Harian</h2>
-                    <p class="dash-panel-caption">30 hari terakhir</p>
+                    <p class="dash-panel-caption">Pendapatan, otomatis tampil sebagai jumlah transaksi jika belum ada pembayaran berhasil</p>
                 </div>
             </div>
             <div class="dash-chart-body">
@@ -440,7 +440,7 @@
             <div class="dash-panel-header">
                 <div>
                     <h2 class="dash-panel-title">Pendapatan Bulanan</h2>
-                    <p class="dash-panel-caption">12 bulan terakhir</p>
+                    <p class="dash-panel-caption">Pendapatan, otomatis tampil sebagai jumlah transaksi jika belum ada pembayaran berhasil</p>
                 </div>
             </div>
             <div class="dash-chart-body">
@@ -452,7 +452,7 @@
             <div class="dash-panel-header">
                 <div>
                     <h2 class="dash-panel-title">Distribusi Lokasi</h2>
-                    <p class="dash-panel-caption">Transaksi berhasil per lokasi</p>
+                    <p class="dash-panel-caption">Semua transaksi per lokasi</p>
                 </div>
             </div>
             <div class="dash-chart-body">
@@ -464,7 +464,7 @@
             <div class="dash-panel-header">
                 <div>
                     <h2 class="dash-panel-title">Jenis Kendaraan</h2>
-                    <p class="dash-panel-caption">Transaksi berhasil per jenis kendaraan</p>
+                    <p class="dash-panel-caption">Semua transaksi per jenis kendaraan</p>
                 </div>
             </div>
             <div class="dash-chart-body">
@@ -726,7 +726,11 @@ function dashboard() {
                 borderRadius: 4,
             }, true);
 
-            this.charts.location = this.makeDoughnutChart('locationChart');
+            this.charts.location = this.makeCartesianChart('locationChart', 'bar', {
+                label: 'Jumlah transaksi',
+                backgroundColor: '#7c3aed',
+                borderRadius: 4,
+            }, false, true);
 
             this.charts.vehicle = this.makeCartesianChart('vehicleChart', 'bar', {
                 label: 'Jumlah transaksi',
@@ -735,7 +739,7 @@ function dashboard() {
             }, false);
         },
 
-        makeCartesianChart(elementId, type, datasetOptions, isMoney) {
+        makeCartesianChart(elementId, type, datasetOptions, isMoney, horizontal = false) {
             const element = document.getElementById(elementId);
             if (!element) return null;
 
@@ -749,6 +753,7 @@ function dashboard() {
                     }],
                 },
                 options: {
+                    indexAxis: horizontal ? 'y' : 'x',
                     responsive: true,
                     maintainAspectRatio: false,
                     animation: false,
@@ -765,11 +770,12 @@ function dashboard() {
                     },
                     scales: {
                         x: {
-                            grid: { display: false },
+                            beginAtZero: horizontal,
+                            grid: { display: horizontal },
                             ticks: { maxRotation: 0, autoSkip: true },
                         },
                         y: {
-                            beginAtZero: true,
+                            beginAtZero: !horizontal,
                             grid: { color: '#f3f4f6' },
                             ticks: {
                                 callback: (value) => isMoney
@@ -816,13 +822,32 @@ function dashboard() {
 
         updateCharts(data) {
             try {
-                this.updateChart(this.charts.daily, data.dailyRevenue || [], 'date', 'revenue');
-                this.updateChart(this.charts.monthly, data.monthlyRevenue || [], 'month', 'revenue');
+                this.updateRevenueChart(this.charts.daily, data.dailyRevenue || [], 'label');
+                this.updateRevenueChart(this.charts.monthly, data.monthlyRevenue || [], 'label');
                 this.updateChart(this.charts.location, data.locationStats || [], 'street_section', 'count');
                 this.updateChart(this.charts.vehicle, data.vehicleStats || [], 'vehicle_type', 'count');
             } catch (error) {
                 console.error('Error updating dashboard charts:', error);
             }
+        },
+
+        updateRevenueChart(chart, rows, labelKey) {
+            if (!chart) return;
+
+            const hasAnyRevenue = rows.some((row) => Number(row.revenue || 0) > 0);
+            const valueKey = hasAnyRevenue ? 'revenue' : 'count';
+            const isMoney = hasAnyRevenue;
+
+            chart.data.labels = rows.map((row) => row[labelKey] || row.date || row.month);
+            chart.data.datasets[0].label = isMoney ? 'Pendapatan' : 'Jumlah transaksi';
+            chart.data.datasets[0].data = rows.map((row) => Number(row[valueKey] || 0));
+            chart.options.plugins.tooltip.callbacks.label = (context) => isMoney
+                ? 'Rp ' + Number(context.raw || 0).toLocaleString('id-ID')
+                : String(context.raw || 0) + ' transaksi';
+            chart.options.scales.y.ticks.callback = (value) => isMoney
+                ? 'Rp ' + Number(value).toLocaleString('id-ID')
+                : value;
+            chart.update('none');
         },
 
         updateChart(chart, rows, labelKey, valueKey) {
