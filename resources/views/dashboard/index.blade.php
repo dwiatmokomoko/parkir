@@ -3,218 +3,557 @@
 @section('title', 'Dashboard - Sistem Monitoring Pembayaran Parkir')
 
 @section('content')
-<div x-data="dashboard()" x-init="init()" class="space-y-8">
-    <!-- Page Header -->
-    <div>
-        <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p class="text-gray-600 mt-2">Monitoring real-time transaksi pembayaran parkir</p>
-    </div>
+<style>
+    [x-cloak] { display: none !important; }
 
-    <!-- Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Daily Revenue Card -->
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-gray-600 text-sm font-medium">Pendapatan Hari Ini</p>
-                    <p class="text-3xl font-bold text-gray-900 mt-2">
-                        Rp <span x-text="formatCurrency(summary.dailyRevenue)"></span>
-                    </p>
-                </div>
-                <div class="bg-blue-100 rounded-full p-3">
-                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-            </div>
+    .dash-page {
+        display: grid;
+        gap: 24px;
+    }
+
+    .dash-toolbar,
+    .dash-card,
+    .dash-panel {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .dash-toolbar {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px;
+    }
+
+    .dash-title {
+        margin: 0;
+        color: #111827;
+        font-size: 24px;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+
+    .dash-subtitle {
+        margin: 6px 0 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .dash-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .dash-updated {
+        color: #6b7280;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .dash-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        gap: 8px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #374151;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        padding: 8px 14px;
+    }
+
+    .dash-button:hover {
+        background: #f9fafb;
+    }
+
+    .dash-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+    }
+
+    .dash-button-primary {
+        border-color: #2563eb;
+        background: #2563eb;
+        color: #ffffff;
+    }
+
+    .dash-button-primary:hover {
+        background: #1d4ed8;
+    }
+
+    .dash-spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.45);
+        border-top-color: #ffffff;
+        border-radius: 999px;
+        animation: dash-spin 0.8s linear infinite;
+    }
+
+    @keyframes dash-spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .dash-alert {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        background: #fef2f2;
+        color: #991b1b;
+        font-size: 14px;
+    }
+
+    .dash-metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .dash-card {
+        min-height: 128px;
+        padding: 18px;
+    }
+
+    .dash-card-label {
+        color: #6b7280;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .dash-card-value {
+        margin-top: 12px;
+        color: #111827;
+        font-size: 26px;
+        font-weight: 700;
+        line-height: 1.15;
+        word-break: break-word;
+    }
+
+    .dash-card-note {
+        margin-top: 8px;
+        color: #9ca3af;
+        font-size: 12px;
+    }
+
+    .dash-status-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+    }
+
+    .dash-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 6px 10px;
+    }
+
+    .dash-pill-success { background: #ecfdf5; color: #047857; }
+    .dash-pill-pending { background: #fffbeb; color: #b45309; }
+    .dash-pill-failed { background: #fef2f2; color: #b91c1c; }
+    .dash-pill-expired { background: #f3f4f6; color: #4b5563; }
+
+    .dash-chart-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .dash-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 16px 18px;
+    }
+
+    .dash-panel-title {
+        margin: 0;
+        color: #111827;
+        font-size: 15px;
+        font-weight: 700;
+    }
+
+    .dash-panel-caption {
+        margin: 4px 0 0;
+        color: #6b7280;
+        font-size: 12px;
+    }
+
+    .dash-chart-body {
+        height: 320px;
+        min-height: 320px;
+        padding: 16px;
+        position: relative;
+    }
+
+    .dash-chart-body canvas {
+        display: block;
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    .dash-table-tools {
+        display: grid;
+        grid-template-columns: minmax(240px, 1fr) 150px 120px;
+        gap: 10px;
+        min-width: min(100%, 560px);
+    }
+
+    .dash-input,
+    .dash-select {
+        width: 100%;
+        min-height: 40px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: #ffffff;
+        color: #111827;
+        font-size: 14px;
+        padding: 8px 10px;
+    }
+
+    .dash-input:focus,
+    .dash-select:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        outline: none;
+    }
+
+    .dash-table-wrap {
+        overflow-x: auto;
+    }
+
+    .dash-table {
+        width: 100%;
+        min-width: 920px;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+    .dash-table th {
+        background: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+        color: #6b7280;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        padding: 12px 14px;
+        text-align: left;
+        text-transform: uppercase;
+    }
+
+    .dash-table td {
+        border-bottom: 1px solid #f3f4f6;
+        color: #374151;
+        font-size: 13px;
+        padding: 12px 14px;
+        vertical-align: middle;
+    }
+
+    .dash-table tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    .dash-truncate {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .dash-money {
+        color: #111827;
+        font-weight: 700;
+        text-align: right;
+    }
+
+    .dash-empty {
+        padding: 42px 16px !important;
+        text-align: center;
+        color: #6b7280 !important;
+    }
+
+    .dash-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        background: #f9fafb;
+        border-top: 1px solid #e5e7eb;
+        padding: 14px 18px;
+    }
+
+    .dash-page-info {
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+    .dash-page-controls {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .dash-page-count {
+        color: #374151;
+        font-size: 13px;
+        min-width: 58px;
+        text-align: center;
+    }
+
+    @media (max-width: 1180px) {
+        .dash-metrics {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 920px) {
+        .dash-toolbar,
+        .dash-panel-header,
+        .dash-pagination {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .dash-actions {
+            justify-content: flex-start;
+        }
+
+        .dash-chart-grid,
+        .dash-metrics {
+            grid-template-columns: 1fr;
+        }
+
+        .dash-table-tools {
+            grid-template-columns: 1fr;
+            min-width: 0;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .dash-title {
+            font-size: 22px;
+        }
+
+        .dash-card-value {
+            font-size: 22px;
+        }
+
+        .dash-chart-body {
+            height: 280px;
+            min-height: 280px;
+        }
+
+        .dash-page-controls {
+            justify-content: space-between;
+            width: 100%;
+        }
+    }
+</style>
+
+<div x-data="dashboard()" x-init="init()" class="dash-page">
+    <section class="dash-toolbar">
+        <div>
+            <h1 class="dash-title">Dashboard</h1>
+            <p class="dash-subtitle">Monitoring transaksi pembayaran parkir secara real-time.</p>
         </div>
 
-        <!-- Monthly Revenue Card -->
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-gray-600 text-sm font-medium">Pendapatan Bulan Ini</p>
-                    <p class="text-3xl font-bold text-gray-900 mt-2">
-                        Rp <span x-text="formatCurrency(summary.monthlyRevenue)"></span>
-                    </p>
-                </div>
-                <div class="bg-green-100 rounded-full p-3">
-                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8L5.257 19.393A2 2 0 005 18.07V5a2 2 0 012-2h5.5"></path>
-                    </svg>
-                </div>
-            </div>
-        </div>
-
-        <!-- Total Transactions Card -->
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-gray-600 text-sm font-medium">Total Transaksi</p>
-                    <p class="text-3xl font-bold text-gray-900 mt-2" x-text="summary.totalTransactions"></p>
-                </div>
-                <div class="bg-purple-100 rounded-full p-3">
-                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Charts Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Daily Revenue Chart -->
-        <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Pendapatan Harian (30 Hari Terakhir)</h3>
-            <div class="relative h-72 sm:h-80">
-                <canvas id="dailyRevenueChart" class="absolute inset-0 h-full w-full"></canvas>
-            </div>
-        </div>
-
-        <!-- Monthly Revenue Chart -->
-        <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Pendapatan Bulanan (12 Bulan Terakhir)</h3>
-            <div class="relative h-72 sm:h-80">
-                <canvas id="monthlyRevenueChart" class="absolute inset-0 h-full w-full"></canvas>
-            </div>
-        </div>
-
-        <!-- Location Distribution Chart -->
-        <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Distribusi Transaksi per Lokasi</h3>
-            <div class="relative h-72 sm:h-80">
-                <canvas id="locationChart" class="absolute inset-0 h-full w-full"></canvas>
-            </div>
-        </div>
-
-        <!-- Vehicle Type Distribution Chart -->
-        <div class="bg-white rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Distribusi Transaksi per Jenis Kendaraan</h3>
-            <div class="relative h-72 sm:h-80">
-                <canvas id="vehicleChart" class="absolute inset-0 h-full w-full"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- Payment Status Distribution -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Distribusi Status Pembayaran</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="flex items-center justify-between p-4 bg-green-50 rounded-lg">
-                <div>
-                    <p class="text-gray-600 text-sm">Berhasil</p>
-                    <p class="text-2xl font-bold text-green-600" x-text="paymentStatus.success"></p>
-                </div>
-                <div class="text-green-600 opacity-20">
-                    <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                    </svg>
-                </div>
-            </div>
-
-            <div class="flex items-center justify-between p-4 bg-yellow-50 rounded-lg">
-                <div>
-                    <p class="text-gray-600 text-sm">Pending</p>
-                    <p class="text-2xl font-bold text-yellow-600" x-text="paymentStatus.pending"></p>
-                </div>
-                <div class="text-yellow-600 opacity-20">
-                    <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.5a1 1 0 002 0V7z" clip-rule="evenodd"></path>
-                    </svg>
-                </div>
-            </div>
-
-            <div class="flex items-center justify-between p-4 bg-red-50 rounded-lg">
-                <div>
-                    <p class="text-gray-600 text-sm">Gagal</p>
-                    <p class="text-2xl font-bold text-red-600" x-text="paymentStatus.failed"></p>
-                </div>
-                <div class="text-red-600 opacity-20">
-                    <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-                    </svg>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Recent Transactions -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-gray-900">Transaksi Terbaru</h3>
-            <button @click="refreshTransactions()" class="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                Refresh
+        <div class="dash-actions">
+            <span class="dash-updated" x-text="lastUpdated || 'Belum dimuat'"></span>
+            <button type="button" class="dash-button dash-button-primary" @click="refreshData()" :disabled="loading">
+                <span x-show="loading" class="dash-spinner" aria-hidden="true"></span>
+                <span x-text="loading ? 'Memuat' : 'Refresh'"></span>
             </button>
         </div>
+    </section>
 
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-50 border-b border-gray-200">
+    <template x-if="errorMessage">
+        <div class="dash-alert">
+            <span x-text="errorMessage"></span>
+            <button type="button" class="dash-button" @click="refreshData()">Coba Lagi</button>
+        </div>
+    </template>
+
+    <section class="dash-metrics" aria-label="Ringkasan dashboard">
+        <div class="dash-card">
+            <div class="dash-card-label">Pendapatan Hari Ini</div>
+            <div class="dash-card-value">Rp <span x-text="formatCurrency(summary.dailyRevenue)"></span></div>
+            <div class="dash-card-note"><span x-text="summary.todayTransactions"></span> transaksi hari ini</div>
+        </div>
+
+        <div class="dash-card">
+            <div class="dash-card-label">Pendapatan Bulan Ini</div>
+            <div class="dash-card-value">Rp <span x-text="formatCurrency(summary.monthlyRevenue)"></span></div>
+            <div class="dash-card-note"><span x-text="summary.totalTransactions"></span> transaksi bulan ini</div>
+        </div>
+
+        <div class="dash-card">
+            <div class="dash-card-label">Tingkat Berhasil</div>
+            <div class="dash-card-value" x-text="formatPercent(summary.successRate)"></div>
+            <div class="dash-card-note">Rasio transaksi berhasil dari seluruh data</div>
+        </div>
+
+        <div class="dash-card">
+            <div class="dash-card-label">Status Pembayaran</div>
+            <div class="dash-status-row">
+                <span class="dash-pill dash-pill-success">Berhasil <span x-text="paymentStatus.success"></span></span>
+                <span class="dash-pill dash-pill-pending">Pending <span x-text="paymentStatus.pending"></span></span>
+                <span class="dash-pill dash-pill-failed">Gagal <span x-text="paymentStatus.failed"></span></span>
+                <span class="dash-pill dash-pill-expired">Expired <span x-text="paymentStatus.expired"></span></span>
+            </div>
+        </div>
+    </section>
+
+    <section class="dash-chart-grid" aria-label="Grafik dashboard">
+        <div class="dash-panel">
+            <div class="dash-panel-header">
+                <div>
+                    <h2 class="dash-panel-title">Pendapatan Harian</h2>
+                    <p class="dash-panel-caption">30 hari terakhir</p>
+                </div>
+            </div>
+            <div class="dash-chart-body">
+                <canvas id="dailyRevenueChart"></canvas>
+            </div>
+        </div>
+
+        <div class="dash-panel">
+            <div class="dash-panel-header">
+                <div>
+                    <h2 class="dash-panel-title">Pendapatan Bulanan</h2>
+                    <p class="dash-panel-caption">12 bulan terakhir</p>
+                </div>
+            </div>
+            <div class="dash-chart-body">
+                <canvas id="monthlyRevenueChart"></canvas>
+            </div>
+        </div>
+
+        <div class="dash-panel">
+            <div class="dash-panel-header">
+                <div>
+                    <h2 class="dash-panel-title">Distribusi Lokasi</h2>
+                    <p class="dash-panel-caption">Transaksi berhasil per lokasi</p>
+                </div>
+            </div>
+            <div class="dash-chart-body">
+                <canvas id="locationChart"></canvas>
+            </div>
+        </div>
+
+        <div class="dash-panel">
+            <div class="dash-panel-header">
+                <div>
+                    <h2 class="dash-panel-title">Jenis Kendaraan</h2>
+                    <p class="dash-panel-caption">Transaksi berhasil per jenis kendaraan</p>
+                </div>
+            </div>
+            <div class="dash-chart-body">
+                <canvas id="vehicleChart"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <section class="dash-panel">
+        <div class="dash-panel-header">
+            <div>
+                <h2 class="dash-panel-title">Transaksi Terbaru</h2>
+                <p class="dash-panel-caption">Maksimal 50 transaksi terakhir dengan pencarian dan pagination.</p>
+            </div>
+
+            <div class="dash-table-tools">
+                <input
+                    type="search"
+                    class="dash-input"
+                    x-model.debounce.250ms="transactionSearch"
+                    @input="transactionsPage = 1"
+                    placeholder="Cari ID, lokasi, juru parkir"
+                >
+                <select class="dash-select" x-model="transactionStatusFilter" @change="transactionsPage = 1">
+                    <option value="">Semua status</option>
+                    <option value="success">Berhasil</option>
+                    <option value="pending">Pending</option>
+                    <option value="failed">Gagal</option>
+                    <option value="expired">Expired</option>
+                </select>
+                <select class="dash-select" x-model.number="transactionsPerPage" @change="transactionsPage = 1">
+                    <option :value="10">10 baris</option>
+                    <option :value="25">25 baris</option>
+                    <option :value="50">50 baris</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="dash-table-wrap">
+            <table class="dash-table">
+                <thead>
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">ID Transaksi</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Juru Parkir</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Lokasi</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Jumlah</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Waktu</th>
+                        <th style="width: 250px;">ID Transaksi</th>
+                        <th style="width: 170px;">Juru Parkir</th>
+                        <th style="width: 180px;">Lokasi</th>
+                        <th style="width: 130px; text-align: right;">Jumlah</th>
+                        <th style="width: 130px;">Status</th>
+                        <th style="width: 180px;">Waktu</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200">
+                <tbody>
                     <template x-for="transaction in paginatedTransactions" :key="transaction.id">
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 text-sm text-gray-900" x-text="transaction.transaction_id"></td>
-                            <td class="px-6 py-4 text-sm text-gray-900" x-text="transaction.parking_attendant?.name || '-'"></td>
-                            <td class="px-6 py-4 text-sm text-gray-900" x-text="transaction.street_section"></td>
-                            <td class="px-6 py-4 text-sm font-medium text-gray-900">
-                                Rp <span x-text="formatCurrency(transaction.amount)"></span>
-                            </td>
-                            <td class="px-6 py-4 text-sm">
+                        <tr>
+                            <td><span class="dash-truncate" x-text="transaction.transaction_id"></span></td>
+                            <td><span class="dash-truncate" x-text="transaction.parking_attendant?.name || '-'"></span></td>
+                            <td><span class="dash-truncate" x-text="transaction.street_section || '-'"></span></td>
+                            <td class="dash-money">Rp <span x-text="formatCurrency(transaction.amount)"></span></td>
+                            <td>
                                 <span :class="getStatusBadgeClass(transaction.payment_status)" x-text="getStatusLabel(transaction.payment_status)"></span>
                             </td>
-                            <td class="px-6 py-4 text-sm text-gray-600" x-text="formatDate(transaction.created_at)"></td>
+                            <td x-text="formatDate(transaction.created_at)"></td>
                         </tr>
                     </template>
-                    <template x-if="transactions.length === 0">
+                    <template x-if="filteredTransactions.length === 0">
                         <tr>
-                            <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500">Belum ada transaksi</td>
+                            <td class="dash-empty" colspan="6">Tidak ada transaksi yang cocok.</td>
                         </tr>
                     </template>
                 </tbody>
             </table>
         </div>
 
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
-            <p class="text-sm text-gray-600">
+        <div class="dash-pagination">
+            <div class="dash-page-info">
                 Menampilkan
-                <span class="font-medium" x-text="transactionStart"></span>
-                -
-                <span class="font-medium" x-text="transactionEnd"></span>
-                dari
-                <span class="font-medium" x-text="transactions.length"></span>
-                transaksi
-            </p>
-            <div class="flex items-center gap-2">
-                <button
-                    @click="previousTransactionPage()"
-                    :disabled="transactionsPage === 1"
-                    class="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 disabled:text-gray-400 disabled:bg-gray-100 hover:bg-gray-50"
-                >
+                <strong x-text="transactionStart"></strong>-<strong x-text="transactionEnd"></strong>
+                dari <strong x-text="filteredTransactions.length"></strong> transaksi
+            </div>
+            <div class="dash-page-controls">
+                <button type="button" class="dash-button" @click="previousTransactionPage()" :disabled="transactionsPage === 1">
                     Sebelumnya
                 </button>
-                <span class="px-3 py-2 text-sm text-gray-700">
-                    <span x-text="transactionsPage"></span> / <span x-text="totalTransactionPages"></span>
-                </span>
-                <button
-                    @click="nextTransactionPage()"
-                    :disabled="transactionsPage === totalTransactionPages"
-                    class="px-3 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 disabled:text-gray-400 disabled:bg-gray-100 hover:bg-gray-50"
-                >
+                <span class="dash-page-count"><span x-text="transactionsPage"></span> / <span x-text="totalTransactionPages"></span></span>
+                <button type="button" class="dash-button" @click="nextTransactionPage()" :disabled="transactionsPage === totalTransactionPages">
                     Berikutnya
                 </button>
             </div>
         </div>
-    </div>
+    </section>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -225,71 +564,122 @@ function dashboard() {
             dailyRevenue: 0,
             monthlyRevenue: 0,
             totalTransactions: 0,
+            todayTransactions: 0,
+            successRate: 0,
         },
         paymentStatus: {
             success: 0,
             pending: 0,
             failed: 0,
+            expired: 0,
         },
         transactions: [],
         transactionsPage: 1,
         transactionsPerPage: 10,
+        transactionSearch: '',
+        transactionStatusFilter: '',
         charts: {},
         refreshInterval: null,
+        loading: false,
+        lastUpdated: '',
+        errorMessage: '',
 
         async init() {
             this.initCharts();
-            await this.loadDashboardData();
-            
-            // Auto-refresh every 30 seconds
+            await this.refreshData();
+
             this.refreshInterval = setInterval(() => {
-                this.loadDashboardData();
+                this.loadDashboardData(false);
             }, 30000);
         },
 
-        async loadDashboardData() {
+        async refreshData() {
+            this.loading = true;
+            await this.loadDashboardData(true);
+            this.loading = false;
+        },
+
+        async loadDashboardData(showErrors = true) {
             try {
                 const response = await fetch('/api/dashboard', {
                     headers: {
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     }
                 });
 
-                if (!response.ok) throw new Error('Failed to load dashboard data');
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error('API dashboard gagal dimuat');
+                }
 
                 const data = await response.json();
-                this.summary = data.summary;
-                this.paymentStatus = data.paymentStatus;
+                this.summary = {
+                    dailyRevenue: Number(data.summary?.dailyRevenue ?? data.today_revenue ?? 0),
+                    monthlyRevenue: Number(data.summary?.monthlyRevenue ?? data.month_revenue ?? 0),
+                    totalTransactions: Number(data.summary?.totalTransactions ?? data.month_transactions ?? 0),
+                    todayTransactions: Number(data.summary?.todayTransactions ?? data.today_transactions ?? 0),
+                    successRate: Number(data.summary?.successRate ?? data.success_rate ?? 0),
+                };
+                this.paymentStatus = {
+                    success: Number(data.paymentStatus?.success ?? data.status_distribution?.success ?? 0),
+                    pending: Number(data.paymentStatus?.pending ?? data.status_distribution?.pending ?? 0),
+                    failed: Number(data.paymentStatus?.failed ?? data.status_distribution?.failed ?? 0),
+                    expired: Number(data.paymentStatus?.expired ?? data.status_distribution?.expired ?? 0),
+                };
                 this.transactions = data.transactions || [];
+                this.lastUpdated = 'Diperbarui ' + new Date().toLocaleTimeString('id-ID', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                });
+                this.errorMessage = '';
                 this.clampTransactionPage();
-
-                // Update charts
                 this.updateCharts(data);
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
+                if (showErrors) {
+                    this.errorMessage = 'Dashboard belum bisa memuat data. Periksa sesi login atau koneksi API.';
+                }
             }
         },
 
-        async refreshTransactions() {
-            await this.loadDashboardData();
+        get filteredTransactions() {
+            const search = this.transactionSearch.trim().toLowerCase();
+
+            return this.transactions.filter((transaction) => {
+                const matchesStatus = !this.transactionStatusFilter || transaction.payment_status === this.transactionStatusFilter;
+                const searchableText = [
+                    transaction.transaction_id,
+                    transaction.street_section,
+                    transaction.parking_attendant?.name,
+                    transaction.vehicle_type,
+                ].filter(Boolean).join(' ').toLowerCase();
+
+                return matchesStatus && (!search || searchableText.includes(search));
+            });
         },
 
         get totalTransactionPages() {
-            return Math.max(1, Math.ceil(this.transactions.length / this.transactionsPerPage));
+            return Math.max(1, Math.ceil(this.filteredTransactions.length / this.transactionsPerPage));
         },
 
         get paginatedTransactions() {
+            this.clampTransactionPage();
             const start = (this.transactionsPage - 1) * this.transactionsPerPage;
-            return this.transactions.slice(start, start + this.transactionsPerPage);
+            return this.filteredTransactions.slice(start, start + this.transactionsPerPage);
         },
 
         get transactionStart() {
-            if (this.transactions.length === 0) return 0;
+            if (this.filteredTransactions.length === 0) return 0;
             return (this.transactionsPage - 1) * this.transactionsPerPage + 1;
         },
 
         get transactionEnd() {
-            return Math.min(this.transactionsPage * this.transactionsPerPage, this.transactions.length);
+            return Math.min(this.transactionsPage * this.transactionsPerPage, this.filteredTransactions.length);
         },
 
         nextTransactionPage() {
@@ -311,210 +701,168 @@ function dashboard() {
         },
 
         initCharts() {
-            // Daily Revenue Chart
-            const dailyCtx = document.getElementById('dailyRevenueChart');
-            if (dailyCtx) {
-                this.charts.daily = new Chart(dailyCtx, {
-                    type: 'line',
-                    data: {
-                        labels: [],
-                        datasets: [{
-                            label: 'Pendapatan (Rp)',
-                            data: [],
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            tension: 0.4,
-                            fill: true,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'top',
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    callback: function(value) {
-                                        return 'Rp ' + value.toLocaleString('id-ID');
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
+            if (!window.Chart) return;
 
-            // Monthly Revenue Chart
-            const monthlyCtx = document.getElementById('monthlyRevenueChart');
-            if (monthlyCtx) {
-                this.charts.monthly = new Chart(monthlyCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: [],
-                        datasets: [{
-                            label: 'Pendapatan (Rp)',
-                            data: [],
-                            backgroundColor: '#10b981',
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'top',
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    callback: function(value) {
-                                        return 'Rp ' + value.toLocaleString('id-ID');
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
+            this.charts.daily = this.makeCartesianChart('dailyRevenueChart', 'line', {
+                label: 'Pendapatan',
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.12)',
+                fill: true,
+                tension: 0.35,
+                pointRadius: 2,
+                pointHoverRadius: 4,
+            }, true);
 
-            // Location Distribution Chart
-            const locationCtx = document.getElementById('locationChart');
-            if (locationCtx) {
-                this.charts.location = new Chart(locationCtx, {
-                    type: 'pie',
-                    data: {
-                        labels: [],
-                        datasets: [{
-                            data: [],
-                            backgroundColor: [
-                                '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
-                                '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'
-                            ],
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                            }
-                        }
-                    }
-                });
-            }
+            this.charts.monthly = this.makeCartesianChart('monthlyRevenueChart', 'bar', {
+                label: 'Pendapatan',
+                backgroundColor: '#059669',
+                borderRadius: 4,
+            }, true);
 
-            // Vehicle Type Distribution Chart
-            const vehicleCtx = document.getElementById('vehicleChart');
-            if (vehicleCtx) {
-                this.charts.vehicle = new Chart(vehicleCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: [],
-                        datasets: [{
-                            label: 'Jumlah Transaksi',
-                            data: [],
-                            backgroundColor: '#f59e0b',
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'top',
-                            }
+            this.charts.location = this.makeDoughnutChart('locationChart');
+
+            this.charts.vehicle = this.makeCartesianChart('vehicleChart', 'bar', {
+                label: 'Jumlah transaksi',
+                backgroundColor: '#d97706',
+                borderRadius: 4,
+            }, false);
+        },
+
+        makeCartesianChart(elementId, type, datasetOptions, isMoney) {
+            const element = document.getElementById(elementId);
+            if (!element) return null;
+
+            return new Chart(element, {
+                type,
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        ...datasetOptions,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    resizeDelay: 150,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => isMoney
+                                    ? 'Rp ' + Number(context.raw || 0).toLocaleString('id-ID')
+                                    : String(context.raw || 0),
+                            },
                         },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                            }
-                        }
-                    }
-                });
-            }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { maxRotation: 0, autoSkip: true },
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f3f4f6' },
+                            ticks: {
+                                callback: (value) => isMoney
+                                    ? 'Rp ' + Number(value).toLocaleString('id-ID')
+                                    : value,
+                            },
+                        },
+                    },
+                },
+            });
+        },
+
+        makeDoughnutChart(elementId) {
+            const element = document.getElementById(elementId);
+            if (!element) return null;
+
+            return new Chart(element, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: ['#2563eb', '#059669', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#65a30d', '#db2777'],
+                        borderWidth: 0,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    resizeDelay: 150,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 10,
+                                padding: 14,
+                            },
+                        },
+                    },
+                },
+            });
         },
 
         updateCharts(data) {
-            // Update Daily Revenue Chart
-            if (this.charts.daily && data.dailyRevenue) {
-                this.charts.daily.data.labels = data.dailyRevenue.map(d => d.date);
-                this.charts.daily.data.datasets[0].data = data.dailyRevenue.map(d => d.revenue);
-                this.charts.daily.update();
-            }
+            this.updateChart(this.charts.daily, data.dailyRevenue || [], 'date', 'revenue');
+            this.updateChart(this.charts.monthly, data.monthlyRevenue || [], 'month', 'revenue');
+            this.updateChart(this.charts.location, data.locationStats || [], 'street_section', 'count');
+            this.updateChart(this.charts.vehicle, data.vehicleStats || [], 'vehicle_type', 'count');
+        },
 
-            // Update Monthly Revenue Chart
-            if (this.charts.monthly && data.monthlyRevenue) {
-                this.charts.monthly.data.labels = data.monthlyRevenue.map(d => d.month);
-                this.charts.monthly.data.datasets[0].data = data.monthlyRevenue.map(d => d.revenue);
-                this.charts.monthly.update();
-            }
+        updateChart(chart, rows, labelKey, valueKey) {
+            if (!chart) return;
 
-            // Update Location Distribution Chart
-            if (this.charts.location && data.locationStats) {
-                this.charts.location.data.labels = data.locationStats.map(d => d.street_section);
-                this.charts.location.data.datasets[0].data = data.locationStats.map(d => d.count);
-                this.charts.location.update();
-            }
-
-            // Update Vehicle Type Distribution Chart
-            if (this.charts.vehicle && data.vehicleStats) {
-                this.charts.vehicle.data.labels = data.vehicleStats.map(d => d.vehicle_type);
-                this.charts.vehicle.data.datasets[0].data = data.vehicleStats.map(d => d.count);
-                this.charts.vehicle.update();
-            }
+            chart.data.labels = rows.map((row) => row[labelKey]);
+            chart.data.datasets[0].data = rows.map((row) => Number(row[valueKey] || 0));
+            chart.update('none');
         },
 
         formatCurrency(value) {
             return new Intl.NumberFormat('id-ID').format(value || 0);
         },
 
+        formatPercent(value) {
+            return new Intl.NumberFormat('id-ID', {
+                maximumFractionDigits: 1,
+            }).format(value || 0) + '%';
+        },
+
         formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleString('id-ID', {
-                year: 'numeric',
-                month: '2-digit',
+            if (!dateString) return '-';
+
+            return new Date(dateString).toLocaleString('id-ID', {
                 day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
             });
         },
 
         getStatusLabel(status) {
             const labels = {
-                'success': 'Berhasil',
-                'pending': 'Pending',
-                'failed': 'Gagal',
-                'expired': 'Kadaluarsa'
+                success: 'Berhasil',
+                pending: 'Pending',
+                failed: 'Gagal',
+                expired: 'Expired',
             };
-            return labels[status] || status;
+            return labels[status] || status || '-';
         },
 
         getStatusBadgeClass(status) {
             const classes = {
-                'success': 'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800',
-                'pending': 'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800',
-                'failed': 'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800',
-                'expired': 'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800'
+                success: 'dash-pill dash-pill-success',
+                pending: 'dash-pill dash-pill-pending',
+                failed: 'dash-pill dash-pill-failed',
+                expired: 'dash-pill dash-pill-expired',
             };
-            return classes[status] || classes['pending'];
+            return classes[status] || classes.pending;
         },
-
-        destroy() {
-            if (this.refreshInterval) {
-                clearInterval(this.refreshInterval);
-            }
-        }
     }
 }
 </script>
