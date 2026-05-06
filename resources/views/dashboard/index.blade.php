@@ -602,6 +602,7 @@ function dashboard() {
         async loadDashboardData(showErrors = true) {
             try {
                 const response = await fetch('/api/dashboard', {
+                    credentials: 'same-origin',
                     headers: {
                         'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -614,7 +615,14 @@ function dashboard() {
                 }
 
                 if (!response.ok) {
-                    throw new Error('API dashboard gagal dimuat');
+                    let message = 'API dashboard gagal dimuat';
+                    try {
+                        const errorData = await response.json();
+                        message = errorData.message || message;
+                    } catch (parseError) {
+                        message = `${message} (${response.status})`;
+                    }
+                    throw new Error(message);
                 }
 
                 const data = await response.json();
@@ -642,7 +650,7 @@ function dashboard() {
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
                 if (showErrors) {
-                    this.errorMessage = 'Dashboard belum bisa memuat data. Periksa sesi login atau koneksi API.';
+                    this.errorMessage = error.message || 'Dashboard belum bisa memuat data. Periksa sesi login atau koneksi API.';
                 }
             }
         },
@@ -808,10 +816,28 @@ function dashboard() {
         },
 
         updateCharts(data) {
-            this.updateChart(this.charts.daily, data.dailyRevenue || [], 'date', 'revenue');
-            this.updateChart(this.charts.monthly, data.monthlyRevenue || [], 'month', 'revenue');
+            this.updateRevenueOrCountChart(this.charts.daily, data.dailyRevenue || [], 'date');
+            this.updateRevenueOrCountChart(this.charts.monthly, data.monthlyRevenue || [], 'month');
             this.updateChart(this.charts.location, data.locationStats || [], 'street_section', 'count');
             this.updateChart(this.charts.vehicle, data.vehicleStats || [], 'vehicle_type', 'count');
+        },
+
+        updateRevenueOrCountChart(chart, rows, labelKey) {
+            if (!chart) return;
+
+            const hasRevenue = rows.some((row) => Number(row.revenue || 0) > 0);
+            const valueKey = hasRevenue ? 'revenue' : 'count';
+
+            chart.data.datasets[0].label = hasRevenue ? 'Pendapatan' : 'Jumlah transaksi';
+            chart.data.labels = rows.map((row) => row[labelKey]);
+            chart.data.datasets[0].data = rows.map((row) => Number(row[valueKey] || 0));
+            chart.options.plugins.tooltip.callbacks.label = (context) => hasRevenue
+                ? 'Rp ' + Number(context.raw || 0).toLocaleString('id-ID')
+                : String(context.raw || 0) + ' transaksi';
+            chart.options.scales.y.ticks.callback = (value) => hasRevenue
+                ? 'Rp ' + Number(value).toLocaleString('id-ID')
+                : value;
+            chart.update('none');
         },
 
         updateChart(chart, rows, labelKey, valueKey) {
