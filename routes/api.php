@@ -51,6 +51,7 @@ Route::prefix('attendant/auth')->middleware('throttle:auth')->group(function () 
 Route::prefix('attendant')->middleware('attendant')->group(function () {
     Route::get('/profile', [AttendantAuthController::class, 'profile']);
     Route::get('/rates', [ParkingRateController::class, 'attendantRates']);
+    Route::get('/transactions', [PaymentController::class, 'attendantTransactions']);
 });
 
 // ============================================================================
@@ -178,6 +179,12 @@ Route::prefix('rates')->middleware('admin')->group(function () {
 // ============================================================================
 
 Route::prefix('audit-logs')->middleware('admin')->group(function () {
+    // Users for audit filters
+    Route::get('/users', [AuditController::class, 'users']);
+
+    // Export audit logs
+    Route::get('/export', [AuditController::class, 'export']);
+
     // List audit logs with pagination
     Route::get('/', [AuditController::class, 'index']);
     

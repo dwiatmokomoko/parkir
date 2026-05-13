@@ -64,6 +64,10 @@ Route::middleware(['web'])->group(function () {
 
 // Attendant Routes
 Route::prefix('attendant')->middleware(['web'])->group(function () {
+    Route::get('/', function () {
+        return redirect()->route('attendant.generate');
+    })->name('attendant.home');
+
     // Login
     Route::get('/login', function () {
         return view('attendant.login');
@@ -74,6 +78,10 @@ Route::prefix('attendant')->middleware(['web'])->group(function () {
         Route::get('/generate', function () {
             return view('attendant.generate');
         })->name('attendant.generate');
+
+        Route::get('/history', function () {
+            return view('attendant.history');
+        })->name('attendant.history');
 
         Route::post('/logout', function () {
             auth('attendant')->logout();

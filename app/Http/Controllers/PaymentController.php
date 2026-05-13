@@ -402,6 +402,126 @@ class PaymentController extends Controller
     }
 
     /**
+     * Get payment status for the attendant page.
+     *
+     * @param string $transactionId
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getStatus(string $transactionId, Request $request): JsonResponse
+    {
+        $attendant = $request->authenticated_attendant;
+
+        $transaction = Transaction::where('transaction_id', $transactionId)
+            ->where('parking_attendant_id', $attendant->id)
+            ->first();
+
+        if (!$transaction) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Transaksi tidak ditemukan',
+            ], 404);
+        }
+
+        if ($transaction->payment_status === 'pending' && $transaction->isExpired()) {
+            $transaction->update(['payment_status' => 'expired']);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->formatAttendantTransaction($transaction->fresh()),
+        ]);
+    }
+
+    /**
+     * List transactions owned by the authenticated attendant.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function attendantTransactions(Request $request): JsonResponse
+    {
+        $attendant = $request->authenticated_attendant;
+        $perPage = (int) $request->query('per_page', 10);
+        $perPage = max(5, min($perPage, 50));
+
+        Transaction::where('parking_attendant_id', $attendant->id)
+            ->where('payment_status', 'pending')
+            ->whereNotNull('qr_code_expires_at')
+            ->where('qr_code_expires_at', '<', Carbon::now())
+            ->update(['payment_status' => 'expired']);
+
+        $query = Transaction::query()
+            ->where('parking_attendant_id', $attendant->id)
+            ->when($request->filled('status') && $request->query('status') !== 'all', function ($query) use ($request) {
+                $query->where('payment_status', $request->query('status'));
+            })
+            ->when($request->filled('vehicle_type') && $request->query('vehicle_type') !== 'all', function ($query) use ($request) {
+                $query->where('vehicle_type', $request->query('vehicle_type'));
+            })
+            ->when($request->filled('date_from'), function ($query) use ($request) {
+                $query->where('created_at', '>=', Carbon::parse($request->query('date_from'))->startOfDay());
+            })
+            ->when($request->filled('date_to'), function ($query) use ($request) {
+                $query->where('created_at', '<=', Carbon::parse($request->query('date_to'))->endOfDay());
+            })
+            ->latest();
+
+        $transactions = $query->paginate($perPage);
+
+        $summaryBase = Transaction::where('parking_attendant_id', $attendant->id);
+        $summary = [
+            'total' => (clone $summaryBase)->count(),
+            'success' => (clone $summaryBase)->where('payment_status', 'success')->count(),
+            'pending' => (clone $summaryBase)->where('payment_status', 'pending')->count(),
+            'failed' => (clone $summaryBase)->where('payment_status', 'failed')->count(),
+            'expired' => (clone $summaryBase)->where('payment_status', 'expired')->count(),
+            'revenue' => (float) (clone $summaryBase)->where('payment_status', 'success')->sum('amount'),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => collect($transactions->items())
+                ->map(fn (Transaction $transaction) => $this->formatAttendantTransaction($transaction))
+                ->values(),
+            'summary' => $summary,
+            'pagination' => [
+                'total' => $transactions->total(),
+                'per_page' => $transactions->perPage(),
+                'current_page' => $transactions->currentPage(),
+                'last_page' => $transactions->lastPage(),
+                'from' => $transactions->firstItem(),
+                'to' => $transactions->lastItem(),
+            ],
+        ]);
+    }
+
+    /**
+     * Format a transaction for attendant-facing responses.
+     *
+     * @param Transaction $transaction
+     * @return array<string, mixed>
+     */
+    protected function formatAttendantTransaction(Transaction $transaction): array
+    {
+        return [
+            'id' => $transaction->id,
+            'transaction_id' => $transaction->transaction_id,
+            'vehicle_type' => $transaction->vehicle_type,
+            'vehicle_label' => $transaction->vehicle_type === 'car' ? 'Mobil' : 'Motor',
+            'amount' => (float) $transaction->amount,
+            'payment_status' => $transaction->payment_status,
+            'payment_method' => $transaction->payment_method,
+            'street_section' => $transaction->street_section,
+            'qr_code_expires_at' => optional($transaction->qr_code_expires_at)->toISOString(),
+            'paid_at' => optional($transaction->paid_at)->toISOString(),
+            'created_at' => optional($transaction->created_at)->toISOString(),
+            'updated_at' => optional($transaction->updated_at)->toISOString(),
+            'failure_reason' => $transaction->failure_reason,
+        ];
+    }
+
+    /**
      * Notify attendant of successful payment
      *
      * @param Transaction $transaction

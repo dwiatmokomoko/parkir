@@ -3,15 +3,20 @@
 @section('title', 'Audit Log - Sistem Monitoring Pembayaran Parkir')
 
 @section('content')
-<div x-data="auditLogsPage()" @load="init()" class="space-y-6">
+<div x-data="auditLogsPage()" x-init="init()" class="space-y-6">
     <!-- Page Header -->
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-3xl font-bold text-gray-900">Audit Log</h1>
             <p class="text-gray-600 mt-2">Pantau semua aktivitas sistem dan perubahan data</p>
         </div>
-        <button @click="exportLogs()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">
-            Export
+        <button
+            @click="exportLogs()"
+            :disabled="isExporting"
+            class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium"
+        >
+            <span x-show="!isExporting">Export CSV</span>
+            <span x-show="isExporting">Menyiapkan...</span>
         </button>
     </div>
 
@@ -204,6 +209,7 @@ function auditLogsPage() {
         },
         showDetailsModal: false,
         selectedLog: null,
+        isExporting: false,
 
         async init() {
             await this.loadUsers();
@@ -212,7 +218,7 @@ function auditLogsPage() {
 
         async loadUsers() {
             try {
-                const response = await fetch('/api/users', {
+                const response = await fetch('/api/audit-logs/users', {
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     }
@@ -230,8 +236,12 @@ function auditLogsPage() {
             try {
                 const params = new URLSearchParams({
                     page: this.currentPage,
-                    limit: this.pageSize,
-                    ...this.filters,
+                    per_page: this.pageSize,
+                    date_from: this.filters.dateFrom,
+                    date_to: this.filters.dateTo,
+                    user_id: this.filters.user,
+                    action: this.filters.action,
+                    search: this.filters.search,
                 });
 
                 const response = await fetch(`/api/audit-logs?${params}`, {
@@ -244,8 +254,8 @@ function auditLogsPage() {
 
                 const data = await response.json();
                 this.logs = data.data || [];
-                this.totalLogs = data.total || 0;
-                this.totalPages = Math.ceil(this.totalLogs / this.pageSize);
+                this.totalLogs = data.pagination?.total || data.total || 0;
+                this.totalPages = data.pagination?.last_page || Math.max(1, Math.ceil(this.totalLogs / this.pageSize));
             } catch (error) {
                 console.error('Error loading logs:', error);
             }
@@ -276,8 +286,19 @@ function auditLogsPage() {
         },
 
         async exportLogs() {
-            const params = new URLSearchParams(this.filters);
+            this.isExporting = true;
+            const params = new URLSearchParams({
+                date_from: this.filters.dateFrom,
+                date_to: this.filters.dateTo,
+                user_id: this.filters.user,
+                action: this.filters.action,
+                search: this.filters.search,
+            });
+
             window.location.href = `/api/audit-logs/export?${params}`;
+            setTimeout(() => {
+                this.isExporting = false;
+            }, 1200);
         },
 
         formatDate(dateString) {

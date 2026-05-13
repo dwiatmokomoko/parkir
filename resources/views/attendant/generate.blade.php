@@ -3,7 +3,7 @@
 @section('title', 'Generate QR Code - Sistem Monitoring Pembayaran Parkir')
 
 @section('content')
-<div x-data="qrGenerator()" @load="init()" class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
+<div x-data="qrGenerator()" x-init="init()" class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
     <div class="max-w-2xl mx-auto px-4">
         <!-- Header -->
         <div class="text-center mb-8">
@@ -129,6 +129,32 @@
                     </div>
                 </div>
             </template>
+
+            <template x-if="paymentSuccessMessage">
+                <div class="border-t pt-8">
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+                        <div class="mx-auto h-12 w-12 rounded-full bg-green-100 flex items-center justify-center mb-3">
+                            <svg class="h-7 w-7 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-green-900">Pembayaran berhasil</h3>
+                        <p class="mt-2 text-sm text-green-800" x-text="paymentSuccessMessage"></p>
+                        <div class="mt-5 flex flex-col sm:flex-row gap-3 justify-center">
+                            <button
+                                type="button"
+                                @click="resetPaymentState()"
+                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold"
+                            >
+                                Generate QR Baru
+                            </button>
+                            <a href="{{ route('attendant.history') }}" class="px-4 py-2 border border-green-300 text-green-800 hover:bg-green-100 rounded-lg text-sm font-semibold">
+                                Lihat Riwayat
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </template>
         </div>
 
         <!-- Logout Button -->
@@ -195,6 +221,7 @@ function qrGenerator() {
         },
         qrCode: null,
         qrCodeUrl: null,
+        currentTransactionId: null,
         attendantInfo: {},
         isGenerating: false,
         isExpired: false,
@@ -204,7 +231,9 @@ function qrGenerator() {
         notifications: [],
         showNotification: false,
         notificationMessage: '',
+        paymentSuccessMessage: '',
         notificationPollInterval: null,
+        paymentStatusInterval: null,
 
         async init() {
             await this.loadRates();
@@ -276,6 +305,7 @@ function qrGenerator() {
                     if (newNotifications.length > previousCount) {
                         const latestNotification = newNotifications[0];
                         this.showNotificationAlert(latestNotification);
+                        this.clearQrWhenNotificationMatches(latestNotification);
                         this.playAudioAlert();
                     }
                 }
@@ -296,6 +326,8 @@ function qrGenerator() {
 
             this.isGenerating = true;
             this.isExpired = false;
+            this.paymentSuccessMessage = '';
+            this.stopPaymentStatusPolling();
 
             try {
                 const response = await fetch('/api/payments/generate-qr', {
@@ -316,9 +348,11 @@ function qrGenerator() {
                 const data = await response.json();
                 this.qrCode = data.data?.qr_code || data.qr_code;
                 this.qrCodeUrl = data.data?.qr_code_url || data.qr_code_url || null;
+                this.currentTransactionId = data.data?.transaction_id || data.transaction_id || null;
 
                 // Start expiration timer
                 this.startExpirationTimer(data.data?.expires_at || data.expires_at);
+                this.startPaymentStatusPolling();
             } catch (error) {
                 console.error('Error generating QR:', error);
                 alert('Terjadi kesalahan saat membuat QR code');
@@ -365,6 +399,84 @@ function qrGenerator() {
             }, 1000);
         },
 
+        startPaymentStatusPolling() {
+            if (!this.currentTransactionId) return;
+
+            this.stopPaymentStatusPolling();
+            this.paymentStatusInterval = setInterval(() => {
+                this.checkPaymentStatus();
+            }, 4000);
+            this.checkPaymentStatus();
+        },
+
+        stopPaymentStatusPolling() {
+            if (this.paymentStatusInterval) {
+                clearInterval(this.paymentStatusInterval);
+                this.paymentStatusInterval = null;
+            }
+        },
+
+        async checkPaymentStatus() {
+            if (!this.currentTransactionId) return;
+
+            try {
+                const response = await fetch(`/api/payments/status/${this.currentTransactionId}`, {
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    }
+                });
+
+                if (!response.ok) return;
+
+                const data = await response.json();
+                const transaction = data.data || {};
+
+                if (transaction.payment_status === 'success') {
+                    this.clearCurrentQr(`Transaksi ${transaction.transaction_id} sebesar Rp ${this.formatCurrency(transaction.amount)} telah diterima.`);
+                    this.loadNotifications();
+                } else if (transaction.payment_status === 'expired') {
+                    this.isExpired = true;
+                    this.stopPaymentStatusPolling();
+                } else if (transaction.payment_status === 'failed') {
+                    this.stopPaymentStatusPolling();
+                }
+            } catch (error) {
+                console.error('Error checking payment status:', error);
+            }
+        },
+
+        clearQrWhenNotificationMatches(notification) {
+            const notificationTransactionId = notification?.data?.transaction_id;
+
+            if (
+                this.currentTransactionId &&
+                notification?.type === 'payment_success' &&
+                notificationTransactionId === this.currentTransactionId
+            ) {
+                this.clearCurrentQr(notification.message || 'Pembayaran berhasil diterima.');
+            }
+        },
+
+        clearCurrentQr(message) {
+            this.qrCode = null;
+            this.qrCodeUrl = null;
+            this.currentTransactionId = null;
+            this.isExpired = false;
+            this.paymentSuccessMessage = message;
+
+            if (this.expirationTimer) {
+                clearInterval(this.expirationTimer);
+                this.expirationTimer = null;
+            }
+
+            this.stopPaymentStatusPolling();
+        },
+
+        resetPaymentState() {
+            this.paymentSuccessMessage = '';
+            this.form.vehicle_type = '';
+        },
+
         showNotificationAlert(notification) {
             this.notificationMessage = notification.message;
             this.showNotification = true;
@@ -375,22 +487,26 @@ function qrGenerator() {
         },
 
         playAudioAlert() {
-            // Create a simple beep sound
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
+            try {
+                // Create a simple beep sound
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
 
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
 
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
 
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
 
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.5);
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch (error) {
+                console.warn('Audio alert blocked:', error);
+            }
         },
 
         formatCurrency(value) {
@@ -412,6 +528,7 @@ function qrGenerator() {
             if (this.notificationPollInterval) {
                 clearInterval(this.notificationPollInterval);
             }
+            this.stopPaymentStatusPolling();
         }
     }
 }
