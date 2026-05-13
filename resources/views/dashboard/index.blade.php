@@ -558,6 +558,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+window.dashboardInitialData = @json($initialDashboardData ?? null);
+
 function dashboard() {
     return {
         summary: {
@@ -586,7 +588,12 @@ function dashboard() {
 
         async init() {
             this.initCharts();
-            await this.refreshData();
+
+            if (window.dashboardInitialData?.success) {
+                this.applyDashboardData(window.dashboardInitialData);
+            } else {
+                await this.refreshData();
+            }
 
             this.refreshInterval = setInterval(() => {
                 this.loadDashboardData(false);
@@ -626,33 +633,37 @@ function dashboard() {
                 }
 
                 const data = await response.json();
-                this.summary = {
-                    dailyRevenue: Number(data.summary?.dailyRevenue ?? data.today_revenue ?? 0),
-                    monthlyRevenue: Number(data.summary?.monthlyRevenue ?? data.month_revenue ?? 0),
-                    totalTransactions: Number(data.summary?.totalTransactions ?? data.month_transactions ?? 0),
-                    todayTransactions: Number(data.summary?.todayTransactions ?? data.today_transactions ?? 0),
-                    successRate: Number(data.summary?.successRate ?? data.success_rate ?? 0),
-                };
-                this.paymentStatus = {
-                    success: Number(data.paymentStatus?.success ?? data.status_distribution?.success ?? 0),
-                    pending: Number(data.paymentStatus?.pending ?? data.status_distribution?.pending ?? 0),
-                    failed: Number(data.paymentStatus?.failed ?? data.status_distribution?.failed ?? 0),
-                    expired: Number(data.paymentStatus?.expired ?? data.status_distribution?.expired ?? 0),
-                };
-                this.transactions = this.asArray(data.transactions || data.recent_transactions);
-                this.lastUpdated = 'Diperbarui ' + new Date().toLocaleTimeString('id-ID', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                });
-                this.errorMessage = '';
-                this.clampTransactionPage();
-                this.updateCharts(data);
+                this.applyDashboardData(data);
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
                 if (showErrors) {
                     this.errorMessage = error.message || 'Dashboard belum bisa memuat data. Periksa sesi login atau koneksi API.';
                 }
             }
+        },
+
+        applyDashboardData(data) {
+            this.summary = {
+                dailyRevenue: Number(data.summary?.dailyRevenue ?? data.today_revenue ?? 0),
+                monthlyRevenue: Number(data.summary?.monthlyRevenue ?? data.month_revenue ?? 0),
+                totalTransactions: Number(data.summary?.totalTransactions ?? data.month_transactions ?? 0),
+                todayTransactions: Number(data.summary?.todayTransactions ?? data.today_transactions ?? 0),
+                successRate: Number(data.summary?.successRate ?? data.success_rate ?? 0),
+            };
+            this.paymentStatus = {
+                success: Number(data.paymentStatus?.success ?? data.status_distribution?.success ?? 0),
+                pending: Number(data.paymentStatus?.pending ?? data.status_distribution?.pending ?? 0),
+                failed: Number(data.paymentStatus?.failed ?? data.status_distribution?.failed ?? 0),
+                expired: Number(data.paymentStatus?.expired ?? data.status_distribution?.expired ?? 0),
+            };
+            this.transactions = this.asArray(data.transactions || data.recent_transactions);
+            this.lastUpdated = 'Diperbarui ' + new Date().toLocaleTimeString('id-ID', {
+                hour: '2-digit',
+                minute: '2-digit',
+            });
+            this.errorMessage = '';
+            this.clampTransactionPage();
+            this.updateCharts(data);
         },
 
         get filteredTransactions() {
