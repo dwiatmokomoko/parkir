@@ -212,6 +212,116 @@
         height: 100% !important;
     }
 
+    .dash-bars-body {
+        height: 320px;
+        min-height: 320px;
+    }
+
+    .dash-month-bars {
+        align-items: end;
+        display: grid;
+        gap: 8px;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        height: 100%;
+    }
+
+    .dash-month-bar {
+        align-items: stretch;
+        display: grid;
+        gap: 8px;
+        grid-template-rows: 34px 1fr 34px;
+        min-width: 0;
+    }
+
+    .dash-month-value,
+    .dash-month-label {
+        color: #64748b;
+        font-size: 11px;
+        line-height: 1.2;
+        overflow: hidden;
+        text-align: center;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .dash-month-track {
+        align-items: end;
+        background: #f1f5f9;
+        border-radius: 6px;
+        display: flex;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .dash-month-fill {
+        background: #059669;
+        border-radius: 6px 6px 0 0;
+        min-height: 0;
+        transition: height 0.2s ease;
+        width: 100%;
+    }
+
+    .dash-bar-list {
+        display: grid;
+        gap: 14px;
+        height: 100%;
+        align-content: center;
+    }
+
+    .dash-bar-row {
+        display: grid;
+        gap: 8px;
+    }
+
+    .dash-bar-meta {
+        align-items: center;
+        color: #475569;
+        display: flex;
+        font-size: 12px;
+        font-weight: 700;
+        gap: 12px;
+        justify-content: space-between;
+    }
+
+    .dash-bar-label {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .dash-bar-value {
+        color: #0f172a;
+        flex: 0 0 auto;
+    }
+
+    .dash-bar-track {
+        background: #f1f5f9;
+        border-radius: 999px;
+        height: 14px;
+        overflow: hidden;
+    }
+
+    .dash-bar-fill {
+        border-radius: inherit;
+        height: 100%;
+        min-width: 4px;
+        transition: width 0.2s ease;
+    }
+
+    .dash-bar-fill-location { background: #7c3aed; }
+    .dash-bar-fill-vehicle { background: #d97706; }
+
+    .dash-empty-chart {
+        align-items: center;
+        color: #94a3b8;
+        display: flex;
+        font-size: 13px;
+        height: 100%;
+        justify-content: center;
+        text-align: center;
+    }
+
     .dash-table-tools {
         display: grid;
         grid-template-columns: minmax(240px, 1fr) 150px 120px;
@@ -443,8 +553,21 @@
                     <p class="dash-panel-caption">Pendapatan, otomatis tampil sebagai jumlah transaksi jika belum ada pembayaran berhasil</p>
                 </div>
             </div>
-            <div class="dash-chart-body">
-                <canvas id="monthlyRevenueChart"></canvas>
+            <div class="dash-chart-body dash-bars-body">
+                <div class="dash-month-bars" x-show="monthlyBars.length > 0">
+                    <template x-for="item in monthlyBars" :key="item.label">
+                        <div class="dash-month-bar">
+                            <div class="dash-month-value" x-text="item.display"></div>
+                            <div class="dash-month-track">
+                                <div class="dash-month-fill" :style="`height: ${item.percent}%`"></div>
+                            </div>
+                            <div class="dash-month-label" x-text="item.label"></div>
+                        </div>
+                    </template>
+                </div>
+                <div class="dash-empty-chart" x-show="monthlyBars.length === 0">
+                    Belum ada data bulanan.
+                </div>
             </div>
         </div>
 
@@ -455,8 +578,23 @@
                     <p class="dash-panel-caption">Semua transaksi per lokasi</p>
                 </div>
             </div>
-            <div class="dash-chart-body">
-                <canvas id="locationChart"></canvas>
+            <div class="dash-chart-body dash-bars-body">
+                <div class="dash-bar-list" x-show="locationBars.length > 0">
+                    <template x-for="item in locationBars" :key="item.label">
+                        <div class="dash-bar-row">
+                            <div class="dash-bar-meta">
+                                <span class="dash-bar-label" x-text="item.label"></span>
+                                <span class="dash-bar-value" x-text="item.display"></span>
+                            </div>
+                            <div class="dash-bar-track">
+                                <div class="dash-bar-fill dash-bar-fill-location" :style="`width: ${item.percent}%`"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div class="dash-empty-chart" x-show="locationBars.length === 0">
+                    Belum ada data lokasi.
+                </div>
             </div>
         </div>
 
@@ -467,8 +605,23 @@
                     <p class="dash-panel-caption">Semua transaksi per jenis kendaraan</p>
                 </div>
             </div>
-            <div class="dash-chart-body">
-                <canvas id="vehicleChart"></canvas>
+            <div class="dash-chart-body dash-bars-body">
+                <div class="dash-bar-list" x-show="vehicleBars.length > 0">
+                    <template x-for="item in vehicleBars" :key="item.label">
+                        <div class="dash-bar-row">
+                            <div class="dash-bar-meta">
+                                <span class="dash-bar-label" x-text="item.label"></span>
+                                <span class="dash-bar-value" x-text="item.display"></span>
+                            </div>
+                            <div class="dash-bar-track">
+                                <div class="dash-bar-fill dash-bar-fill-vehicle" :style="`width: ${item.percent}%`"></div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div class="dash-empty-chart" x-show="vehicleBars.length === 0">
+                    Belum ada data jenis kendaraan.
+                </div>
             </div>
         </div>
     </section>
@@ -581,6 +734,9 @@ function dashboard() {
         transactionSearch: '',
         transactionStatusFilter: '',
         charts: {},
+        monthlyBars: [],
+        locationBars: [],
+        vehicleBars: [],
         refreshInterval: null,
         loading: false,
         lastUpdated: '',
@@ -867,6 +1023,30 @@ function dashboard() {
                     'Tidak diketahui'
                 );
 
+                const monthlyIsMoney = monthlyRows.some((row) => Number(row.revenue || 0) > 0 || row.type === 'money');
+                const monthlyValueKey = monthlyIsMoney ? 'revenue' : 'count';
+                this.monthlyBars = this.toBarItems(
+                    monthlyRows,
+                    (row) => row.label || row.month || '-',
+                    (row) => Number(row[monthlyValueKey] ?? row.value ?? 0),
+                    monthlyIsMoney ? 'money' : 'count',
+                    false
+                );
+                this.locationBars = this.toBarItems(
+                    locationRows,
+                    (row) => row.street_section || row.label || 'Tidak diketahui',
+                    (row) => Number(row.count ?? row.value ?? 0),
+                    'count',
+                    true
+                );
+                this.vehicleBars = this.toBarItems(
+                    vehicleRows,
+                    (row) => this.getVehicleLabel(row.vehicle_type || row.label),
+                    (row) => Number(row.count ?? row.value ?? 0),
+                    'count',
+                    true
+                );
+
                 this.updateRevenueChart(this.charts.daily, dailyRows, 'label');
                 this.updateRevenueChart(this.charts.monthly, monthlyRows, 'label');
                 this.updateChart(this.charts.location, locationRows, 'street_section', 'count');
@@ -968,6 +1148,28 @@ function dashboard() {
                 .slice(0, 10);
         },
 
+        toBarItems(rows, labelResolver, valueResolver, type, hideZeroRows) {
+            const items = this.asArray(rows)
+                .map((row) => {
+                    const value = Number(valueResolver(row) || 0);
+                    return {
+                        label: String(labelResolver(row) || '-'),
+                        value,
+                        display: type === 'money'
+                            ? 'Rp ' + this.formatCurrency(value)
+                            : value + ' transaksi',
+                    };
+                })
+                .filter((item) => !hideZeroRows || item.value > 0);
+
+            const maxValue = Math.max(1, ...items.map((item) => item.value));
+
+            return items.map((item) => ({
+                ...item,
+                percent: item.value > 0 ? Math.max(4, Math.round((item.value / maxValue) * 100)) : 0,
+            }));
+        },
+
         formatDateKey(date) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -1016,6 +1218,16 @@ function dashboard() {
             return new Intl.NumberFormat('id-ID', {
                 maximumFractionDigits: 1,
             }).format(value || 0) + '%';
+        },
+
+        getVehicleLabel(vehicleType) {
+            const labels = {
+                motorcycle: 'Motor',
+                car: 'Mobil',
+                truck: 'Truk',
+                bus: 'Bus',
+            };
+            return labels[vehicleType] || vehicleType || 'Tidak diketahui';
         },
 
         formatDate(dateString) {
