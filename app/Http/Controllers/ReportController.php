@@ -54,6 +54,7 @@ class ReportController extends Controller
             'end_date' => $request->input('end_date', $request->input('dateTo')),
             'street_sections' => $request->input('street_sections', $request->input('locations', [])),
             'parking_attendant_ids' => $request->input('parking_attendant_ids', $request->input('attendants', [])),
+            'statuses' => $request->input('statuses', $request->input('status') ? [$request->input('status')] : []),
         ]);
         
         // Validate request
@@ -65,6 +66,8 @@ class ReportController extends Controller
             'street_sections.*' => 'string|max:255',
             'parking_attendant_ids' => 'nullable|array',
             'parking_attendant_ids.*' => 'integer|exists:parking_attendants,id',
+            'statuses' => 'nullable|array',
+            'statuses.*' => 'in:success,pending,failed,expired',
         ]);
 
         // Validate date range (max 90 days)
@@ -87,6 +90,7 @@ class ReportController extends Controller
                 'end_date' => $validated['end_date'],
                 'street_sections' => array_values(array_filter($validated['street_sections'] ?? [])),
                 'parking_attendant_ids' => array_values(array_filter($validated['parking_attendant_ids'] ?? [])),
+                'statuses' => array_values(array_filter($validated['statuses'] ?? [])),
             ],
             'status' => 'pending',
             'created_at' => now(),

@@ -78,6 +78,7 @@ class GenerateReportJob implements ShouldQueue
 
             $streetSections = array_values(array_filter($filters['street_sections'] ?? []));
             $attendantIds = array_values(array_filter($filters['parking_attendant_ids'] ?? []));
+            $statuses = array_values(array_filter($filters['statuses'] ?? []));
 
             // Apply street section filter
             if (!empty($streetSections)) {
@@ -91,6 +92,13 @@ class GenerateReportJob implements ShouldQueue
                 $query->whereIn('parking_attendant_id', $attendantIds);
             } elseif (!empty($filters['parking_attendant_id'])) {
                 $query->where('parking_attendant_id', $filters['parking_attendant_id']);
+            }
+
+            // Apply payment status filter
+            if (!empty($statuses)) {
+                $query->whereIn('payment_status', $statuses);
+            } elseif (!empty($filters['payment_status'])) {
+                $query->where('payment_status', $filters['payment_status']);
             }
 
             // Eager load relationships

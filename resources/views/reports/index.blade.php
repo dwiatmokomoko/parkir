@@ -113,6 +113,12 @@
         background: #f8fafc;
     }
 
+    .report-chip.is-active {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #ffffff;
+    }
+
     .report-format-card {
         align-items: center;
         border-radius: 8px;
@@ -305,10 +311,21 @@
                 <div class="mt-4">
                     <div class="report-section-label">Pilih Cepat</div>
                     <div class="report-quick-row">
-                        <button type="button" class="report-chip" @click="setRange(0)">Hari ini</button>
-                        <button type="button" class="report-chip" @click="setRange(6)">7 hari</button>
-                        <button type="button" class="report-chip" @click="setRange(29)">30 hari</button>
-                        <button type="button" class="report-chip" @click="setThisMonth()">Bulan ini</button>
+                        <button type="button" :class="quickRange === 'today' ? 'report-chip is-active' : 'report-chip'" @click.prevent="setRange(0, 'today')">Hari ini</button>
+                        <button type="button" :class="quickRange === '7d' ? 'report-chip is-active' : 'report-chip'" @click.prevent="setRange(6, '7d')">7 hari</button>
+                        <button type="button" :class="quickRange === '30d' ? 'report-chip is-active' : 'report-chip'" @click.prevent="setRange(29, '30d')">30 hari</button>
+                        <button type="button" :class="quickRange === 'month' ? 'report-chip is-active' : 'report-chip'" @click.prevent="setThisMonth()">Bulan ini</button>
+                    </div>
+                </div>
+
+                <div class="mt-5">
+                    <div class="report-section-label">Status Transaksi</div>
+                    <div class="report-quick-row">
+                        <button type="button" :class="isStatusActive('all') ? 'report-chip is-active' : 'report-chip'" @click.prevent="setStatusFilter('all')">Semua Transaksi</button>
+                        <button type="button" :class="isStatusActive('success') ? 'report-chip is-active' : 'report-chip'" @click.prevent="setStatusFilter('success')">Berhasil</button>
+                        <button type="button" :class="isStatusActive('pending') ? 'report-chip is-active' : 'report-chip'" @click.prevent="setStatusFilter('pending')">Pending</button>
+                        <button type="button" :class="isStatusActive('failed') ? 'report-chip is-active' : 'report-chip'" @click.prevent="setStatusFilter('failed')">Gagal</button>
+                        <button type="button" :class="isStatusActive('expired') ? 'report-chip is-active' : 'report-chip'" @click.prevent="setStatusFilter('expired')">Expired</button>
                     </div>
                 </div>
 
@@ -430,17 +447,19 @@ function reportsPage() {
             end_date: '',
             street_sections: [],
             parking_attendant_ids: [],
+            statuses: [],
             type: 'pdf',
         },
         reports: [],
         locations: [],
         attendants: [],
         isGenerating: false,
+        quickRange: '30d',
         successMessage: '',
         errorMessage: '',
 
         async init() {
-            this.setRange(29);
+            this.setRange(29, '30d');
             await Promise.all([this.loadAttendants(), this.loadReports()]);
         },
 
@@ -527,25 +546,45 @@ function reportsPage() {
             }
         },
 
-        setRange(daysAgo) {
+        setRange(daysAgo, rangeKey = null) {
             const end = new Date();
             const start = new Date();
             start.setDate(end.getDate() - daysAgo);
             this.reportForm.start_date = this.formatDateForInput(start);
             this.reportForm.end_date = this.formatDateForInput(end);
+            this.quickRange = rangeKey;
+            this.clearMessages();
         },
 
         setThisMonth() {
             const now = new Date();
             this.reportForm.start_date = this.formatDateForInput(new Date(now.getFullYear(), now.getMonth(), 1));
             this.reportForm.end_date = this.formatDateForInput(now);
+            this.quickRange = 'month';
+            this.clearMessages();
+        },
+
+        setStatusFilter(status) {
+            this.reportForm.statuses = status === 'all' ? [] : [status];
+            this.clearMessages();
+        },
+
+        isStatusActive(status) {
+            return status === 'all'
+                ? this.reportForm.statuses.length === 0
+                : this.reportForm.statuses.includes(status);
         },
 
         resetFilters() {
-            this.setRange(29);
+            this.setRange(29, '30d');
             this.reportForm.street_sections = [];
             this.reportForm.parking_attendant_ids = [];
+            this.reportForm.statuses = [];
             this.reportForm.type = 'pdf';
+            this.clearMessages();
+        },
+
+        clearMessages() {
             this.successMessage = '';
             this.errorMessage = '';
         },
@@ -578,7 +617,22 @@ function reportsPage() {
             const parts = [];
             if (filters?.street_sections?.length) parts.push(`${filters.street_sections.length} lokasi`);
             if (filters?.parking_attendant_ids?.length) parts.push(`${filters.parking_attendant_ids.length} juru parkir`);
+            if (filters?.statuses?.length) parts.push(this.formatStatusList(filters.statuses));
             return parts.length ? parts.join(', ') : 'Semua data';
+        },
+
+        formatStatusList(statuses) {
+            return statuses.map((status) => this.getTransactionStatusLabel(status)).join(', ');
+        },
+
+        getTransactionStatusLabel(status) {
+            const labels = {
+                success: 'Berhasil',
+                pending: 'Pending',
+                failed: 'Gagal',
+                expired: 'Expired',
+            };
+            return labels[status] || status;
         },
 
         getStatusLabel(status) {

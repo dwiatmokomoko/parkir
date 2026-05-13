@@ -126,6 +126,12 @@
                 <strong>Lokasi:</strong> {{ $filters['street_section'] }}
             </div>
         @endif
+        @if(!empty($filters['statuses']))
+            <div class="metadata-row">
+                <strong>Status:</strong>
+                {{ collect($filters['statuses'])->map(fn ($status) => ['success' => 'Berhasil', 'pending' => 'Pending', 'failed' => 'Gagal', 'expired' => 'Expired'][$status] ?? $status)->implode(', ') }}
+            </div>
+        @endif
         <div class="metadata-row">
             <strong>Tanggal Cetak:</strong> {{ $generatedAt }}
         </div>

@@ -62,6 +62,22 @@ class ExcelReportService
             $row++;
         }
 
+        if (!empty($filters['statuses'])) {
+            $statusLabels = collect($filters['statuses'])
+                ->map(fn ($status) => match ($status) {
+                    'success' => 'Berhasil',
+                    'pending' => 'Pending',
+                    'failed' => 'Gagal',
+                    'expired' => 'Expired',
+                    default => $status,
+                })
+                ->implode(', ');
+
+            $sheet->setCellValue("A{$row}", 'Status:');
+            $sheet->setCellValue("B{$row}", $statusLabels);
+            $row++;
+        }
+
         $sheet->setCellValue("A{$row}", 'Tanggal Cetak:');
         $sheet->setCellValue("B{$row}", now()->format('d/m/Y H:i:s'));
         $row += 2;
