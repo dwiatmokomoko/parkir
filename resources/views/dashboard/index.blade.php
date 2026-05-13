@@ -200,6 +200,9 @@
     }
 
     .dash-chart-body {
+        background:
+            repeating-linear-gradient(0deg, rgba(148, 163, 184, 0.10) 0, rgba(148, 163, 184, 0.10) 1px, transparent 1px, transparent 28px),
+            #ffffff;
         height: 320px;
         min-height: 320px;
         padding: 16px;
@@ -218,48 +221,59 @@
     }
 
     .dash-month-bars {
-        align-items: end;
         display: grid;
-        gap: 8px;
-        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 7px;
+        grid-template-columns: 1fr;
         height: 100%;
+        align-content: center;
     }
 
     .dash-month-bar {
-        align-items: stretch;
+        align-items: center;
         display: grid;
-        gap: 8px;
-        grid-template-rows: 34px 1fr 34px;
+        gap: 10px;
+        grid-template-columns: 84px minmax(0, 1fr) 100px;
         min-width: 0;
     }
 
     .dash-month-value,
     .dash-month-label {
-        color: #64748b;
+        color: #475569;
         font-size: 11px;
+        font-weight: 700;
         line-height: 1.2;
         overflow: hidden;
-        text-align: center;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
 
+    .dash-month-label {
+        text-align: left;
+    }
+
+    .dash-month-value {
+        text-align: right;
+    }
+
     .dash-month-track {
-        align-items: end;
-        background: #f1f5f9;
-        border-radius: 6px;
+        background: #e2e8f0;
+        border-radius: 999px;
         display: flex;
-        min-height: 0;
+        height: 12px;
         overflow: hidden;
     }
 
     .dash-month-fill {
-        background: #059669;
-        border-radius: 6px 6px 0 0;
-        min-height: 0;
-        transition: height 0.2s ease;
-        width: 100%;
+        background: linear-gradient(90deg, #059669, #22c55e);
+        border-radius: inherit;
+        height: 100%;
+        min-width: 0;
+        transition: width 0.2s ease;
     }
+
+    .dash-month-bar:nth-child(3n+1) .dash-month-fill { background: linear-gradient(90deg, #0891b2, #22d3ee); }
+    .dash-month-bar:nth-child(3n+2) .dash-month-fill { background: linear-gradient(90deg, #059669, #34d399); }
+    .dash-month-bar:nth-child(3n+3) .dash-month-fill { background: linear-gradient(90deg, #2563eb, #60a5fa); }
 
     .dash-bar-list {
         display: grid;
@@ -296,9 +310,9 @@
     }
 
     .dash-bar-track {
-        background: #f1f5f9;
+        background: #e2e8f0;
         border-radius: 999px;
-        height: 14px;
+        height: 16px;
         overflow: hidden;
     }
 
@@ -309,8 +323,16 @@
         transition: width 0.2s ease;
     }
 
-    .dash-bar-fill-location { background: #7c3aed; }
-    .dash-bar-fill-vehicle { background: #d97706; }
+    .dash-bar-fill-location { background: linear-gradient(90deg, #7c3aed, #a855f7); }
+    .dash-bar-fill-vehicle { background: linear-gradient(90deg, #d97706, #f59e0b); }
+
+    .dash-bar-row:nth-child(even) .dash-bar-fill-location {
+        background: linear-gradient(90deg, #2563eb, #38bdf8);
+    }
+
+    .dash-bar-row:nth-child(even) .dash-bar-fill-vehicle {
+        background: linear-gradient(90deg, #059669, #34d399);
+    }
 
     .dash-empty-chart {
         align-items: center;
@@ -473,6 +495,11 @@
             min-height: 280px;
         }
 
+        .dash-month-bar {
+            gap: 8px;
+            grid-template-columns: 62px minmax(0, 1fr) 78px;
+        }
+
         .dash-page-controls {
             justify-content: space-between;
             width: 100%;
@@ -557,11 +584,11 @@
                 <div class="dash-month-bars" x-show="monthlyBars.length > 0">
                     <template x-for="item in monthlyBars" :key="item.label">
                         <div class="dash-month-bar">
-                            <div class="dash-month-value" x-text="item.display"></div>
-                            <div class="dash-month-track">
-                                <div class="dash-month-fill" :style="`height: ${item.percent}%`"></div>
-                            </div>
                             <div class="dash-month-label" x-text="item.label"></div>
+                            <div class="dash-month-track">
+                                <div class="dash-month-fill" :style="`width: ${item.percent}%`"></div>
+                            </div>
+                            <div class="dash-month-value" x-text="item.display"></div>
                         </div>
                     </template>
                 </div>
