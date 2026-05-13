@@ -19,11 +19,12 @@ class PDFReportService
     public function generate(Collection $transactions, array $filters): string
     {
         // Calculate summary totals
-        $totalRevenue = $transactions->sum('amount');
+        $totalRevenue = $transactions->where('payment_status', 'success')->sum('amount');
         $transactionCount = $transactions->count();
         $successCount = $transactions->where('payment_status', 'success')->count();
         $failedCount = $transactions->where('payment_status', 'failed')->count();
         $pendingCount = $transactions->where('payment_status', 'pending')->count();
+        $expiredCount = $transactions->where('payment_status', 'expired')->count();
 
         // Prepare data for view
         $data = [
@@ -34,6 +35,7 @@ class PDFReportService
             'successCount' => $successCount,
             'failedCount' => $failedCount,
             'pendingCount' => $pendingCount,
+            'expiredCount' => $expiredCount,
             'generatedAt' => now()->format('d/m/Y H:i:s'),
             'startDate' => $filters['start_date'] ?? null,
             'endDate' => $filters['end_date'] ?? null,

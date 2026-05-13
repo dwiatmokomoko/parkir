@@ -35,7 +35,7 @@ class UpdateAttendantRequest extends FormRequest
             'name' => 'sometimes|string|max:255',
             'street_section' => 'sometimes|string|max:255',
             'location_side' => 'nullable|string|max:50',
-            'bank_account_number' => 'sometimes|string|max:50',
+            'bank_account_number' => 'nullable|string|max:50',
             'bank_name' => 'nullable|string|max:100',
             'pin' => [
                 'sometimes',

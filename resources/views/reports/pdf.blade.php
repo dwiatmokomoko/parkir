@@ -105,7 +105,7 @@
 </head>
 <body>
     <div class="header">
-        <div class="logo">🅓 DISHUB</div>
+        <div class="logo">DISHUB</div>
         <div class="title">Laporan Transaksi Pembayaran Parkir</div>
         <div class="subtitle">Dinas Perhubungan</div>
     </div>
@@ -117,7 +117,11 @@
             s/d 
             {{ \Carbon\Carbon::createFromFormat('Y-m-d', $endDate)->format('d/m/Y') }}
         </div>
-        @if(!empty($filters['street_section']))
+        @if(!empty($filters['street_sections']))
+            <div class="metadata-row">
+                <strong>Lokasi:</strong> {{ implode(', ', $filters['street_sections']) }}
+            </div>
+        @elseif(!empty($filters['street_section']))
             <div class="metadata-row">
                 <strong>Lokasi:</strong> {{ $filters['street_section'] }}
             </div>
@@ -143,6 +147,10 @@
         <div class="summary-row">
             <span class="summary-label">Transaksi Pending:</span>
             <span class="summary-value">{{ $pendingCount }}</span>
+        </div>
+        <div class="summary-row">
+            <span class="summary-label">Transaksi Expired:</span>
+            <span class="summary-value">{{ $expiredCount }}</span>
         </div>
         <div class="summary-row" style="border-top: 1px solid #ddd; padding-top: 8px; margin-top: 8px;">
             <span class="summary-label">Total Pendapatan:</span>
@@ -201,7 +209,7 @@
 
     <div class="footer">
         <p>Laporan ini dibuat secara otomatis oleh Sistem Monitoring Pembayaran Parkir</p>
-        <p>© Dinas Perhubungan - {{ now()->year }}</p>
+        <p>Dinas Perhubungan - {{ now()->year }}</p>
     </div>
 </body>
 </html>

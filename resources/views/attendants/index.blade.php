@@ -112,14 +112,6 @@
                             <label class="block text-sm font-medium text-gray-700 mb-2">Sisi Lokasi</label>
                             <input type="text" x-model="form.location_side" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Nomor Rekening</label>
-                            <input type="text" x-model="form.bank_account_number" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Nama Bank</label>
-                            <input type="text" x-model="form.bank_name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                        </div>
                         <template x-if="!showEditModal">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">PIN</label>
@@ -161,8 +153,6 @@ function attendantsPage() {
             name: '',
             street_section: '',
             location_side: '',
-            bank_account_number: '',
-            bank_name: '',
             pin: '',
         },
 
@@ -268,8 +258,6 @@ function attendantsPage() {
                 name: '',
                 street_section: '',
                 location_side: '',
-                bank_account_number: '',
-                bank_name: '',
                 pin: '',
             };
         },

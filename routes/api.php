@@ -121,6 +121,9 @@ Route::prefix('dashboard')->middleware('admin')->group(function () {
 // ============================================================================
 
 Route::prefix('reports')->middleware('admin')->group(function () {
+    // List generated reports
+    Route::get('/', [ReportController::class, 'index']);
+
     // Generate report (async)
     Route::post('/generate', [ReportController::class, 'generate']);
     

@@ -5,29 +5,67 @@ namespace App\Http\Controllers;
 use App\Models\Report;
 use App\Jobs\GenerateReportJob;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class ReportController extends Controller
 {
+    public function index(Request $request): JsonResponse
+    {
+        $userId = $request->session()->get('admin_user_id');
+
+        $reports = Report::where('user_id', $userId)
+            ->orderByDesc('created_at')
+            ->limit(25)
+            ->get()
+            ->map(function (Report $report) {
+                return [
+                    'id' => $report->id,
+                    'type' => $report->type,
+                    'filters' => $report->filters ?? [],
+                    'status' => $report->status,
+                    'error_message' => $report->error_message,
+                    'created_at' => $report->created_at,
+                    'completed_at' => $report->completed_at,
+                    'is_downloadable' => $report->status === 'completed' && !empty($report->file_path),
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'data' => $reports,
+        ]);
+    }
+
     /**
      * Generate a new report (async job dispatch)
      *
      * @return JsonResponse
      */
-    public function generate(): JsonResponse
+    public function generate(Request $request): JsonResponse
     {
         // Get user ID from session
-        $userId = request()->session()->get('admin_user_id');
+        $userId = $request->session()->get('admin_user_id');
+
+        $request->merge([
+            'type' => $request->input('type', $request->input('format')),
+            'start_date' => $request->input('start_date', $request->input('dateFrom')),
+            'end_date' => $request->input('end_date', $request->input('dateTo')),
+            'street_sections' => $request->input('street_sections', $request->input('locations', [])),
+            'parking_attendant_ids' => $request->input('parking_attendant_ids', $request->input('attendants', [])),
+        ]);
         
         // Validate request
-        $validated = request()->validate([
+        $validated = $request->validate([
             'type' => 'required|in:pdf,excel',
             'start_date' => 'required|date_format:Y-m-d',
             'end_date' => 'required|date_format:Y-m-d|after_or_equal:start_date',
-            'street_section' => 'nullable|string',
-            'parking_attendant_id' => 'nullable|integer|exists:parking_attendants,id',
+            'street_sections' => 'nullable|array',
+            'street_sections.*' => 'string|max:255',
+            'parking_attendant_ids' => 'nullable|array',
+            'parking_attendant_ids.*' => 'integer|exists:parking_attendants,id',
         ]);
 
         // Validate date range (max 90 days)
@@ -48,22 +86,29 @@ class ReportController extends Controller
             'filters' => [
                 'start_date' => $validated['start_date'],
                 'end_date' => $validated['end_date'],
-                'street_section' => $validated['street_section'] ?? null,
-                'parking_attendant_id' => $validated['parking_attendant_id'] ?? null,
+                'street_sections' => array_values(array_filter($validated['street_sections'] ?? [])),
+                'parking_attendant_ids' => array_values(array_filter($validated['parking_attendant_ids'] ?? [])),
             ],
             'status' => 'pending',
             'created_at' => now(),
         ]);
 
-        // Dispatch async job
-        GenerateReportJob::dispatch($report);
+        try {
+            (new GenerateReportJob($report))->handle();
+            $report->refresh();
+        } catch (\Throwable $e) {
+            $report->refresh();
+        }
 
         return response()->json([
-            'success' => true,
-            'message' => 'Laporan sedang diproses',
+            'success' => $report->status === 'completed',
+            'message' => $report->status === 'completed'
+                ? 'Laporan berhasil dibuat'
+                : 'Laporan gagal dibuat',
             'report_id' => $report->id,
-            'status' => 'pending',
-        ], 202);
+            'status' => $report->status,
+            'data' => $report,
+        ], $report->status === 'completed' ? 201 : 500);
     }
 
     /**
@@ -80,7 +125,7 @@ class ReportController extends Controller
         $userId = request()->session()->get('admin_user_id');
 
         // Check authorization
-        if ($report->user_id !== $userId) {
+        if ((int) $report->user_id !== (int) $userId) {
             return response()->json([
                 'success' => false,
                 'message' => 'Anda tidak memiliki akses untuk mengunduh laporan ini',
@@ -125,7 +170,7 @@ class ReportController extends Controller
         $userId = request()->session()->get('admin_user_id');
 
         // Check authorization
-        if ($report->user_id !== $userId) {
+        if ((int) $report->user_id !== (int) $userId) {
             return response()->json([
                 'success' => false,
                 'message' => 'Anda tidak memiliki akses untuk melihat laporan ini',

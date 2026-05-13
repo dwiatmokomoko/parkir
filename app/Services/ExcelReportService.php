@@ -52,7 +52,11 @@ class ExcelReportService
         $sheet->setCellValue("B{$row}", Carbon::createFromFormat('Y-m-d', $filters['start_date'])->format('d/m/Y') . ' s/d ' . Carbon::createFromFormat('Y-m-d', $filters['end_date'])->format('d/m/Y'));
         $row++;
 
-        if (!empty($filters['street_section'])) {
+        if (!empty($filters['street_sections'])) {
+            $sheet->setCellValue("A{$row}", 'Lokasi:');
+            $sheet->setCellValue("B{$row}", implode(', ', $filters['street_sections']));
+            $row++;
+        } elseif (!empty($filters['street_section'])) {
             $sheet->setCellValue("A{$row}", 'Lokasi:');
             $sheet->setCellValue("B{$row}", $filters['street_section']);
             $row++;
@@ -141,6 +145,11 @@ class ExcelReportService
         $summaryRow++;
         $sheet->setCellValue("A{$summaryRow}", 'Transaksi Pending:');
         $sheet->setCellValue("B{$summaryRow}", $transactions->where('payment_status', 'pending')->count());
+        $sheet->getStyle("A{$summaryRow}")->getFont()->setBold(true);
+
+        $summaryRow++;
+        $sheet->setCellValue("A{$summaryRow}", 'Transaksi Expired:');
+        $sheet->setCellValue("B{$summaryRow}", $transactions->where('payment_status', 'expired')->count());
         $sheet->getStyle("A{$summaryRow}")->getFont()->setBold(true);
 
         $summaryRow++;

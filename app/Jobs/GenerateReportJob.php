@@ -76,13 +76,20 @@ class GenerateReportJob implements ShouldQueue
                 $query->whereDate('created_at', '<=', $filters['end_date']);
             }
 
+            $streetSections = array_values(array_filter($filters['street_sections'] ?? []));
+            $attendantIds = array_values(array_filter($filters['parking_attendant_ids'] ?? []));
+
             // Apply street section filter
-            if (!empty($filters['street_section'])) {
+            if (!empty($streetSections)) {
+                $query->whereIn('street_section', $streetSections);
+            } elseif (!empty($filters['street_section'])) {
                 $query->where('street_section', $filters['street_section']);
             }
 
             // Apply parking attendant filter
-            if (!empty($filters['parking_attendant_id'])) {
+            if (!empty($attendantIds)) {
+                $query->whereIn('parking_attendant_id', $attendantIds);
+            } elseif (!empty($filters['parking_attendant_id'])) {
                 $query->where('parking_attendant_id', $filters['parking_attendant_id']);
             }
 

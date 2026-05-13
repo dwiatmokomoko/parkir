@@ -3,183 +3,467 @@
 @section('title', 'Laporan - Sistem Monitoring Pembayaran Parkir')
 
 @section('content')
-<div x-data="reportsPage()" @load="init()" class="space-y-6">
-    <!-- Page Header -->
-    <div>
-        <h1 class="text-3xl font-bold text-gray-900">Laporan</h1>
-        <p class="text-gray-600 mt-2">Generate dan download laporan transaksi parkir</p>
+<style>
+    [x-cloak] { display: none !important; }
+
+    .report-page {
+        display: grid;
+        gap: 24px;
+    }
+
+    .report-header {
+        align-items: flex-end;
+        display: flex;
+        gap: 16px;
+        justify-content: space-between;
+    }
+
+    .report-title {
+        color: #111827;
+        font-size: 30px;
+        font-weight: 800;
+        line-height: 1.2;
+        margin: 0;
+    }
+
+    .report-subtitle {
+        color: #64748b;
+        margin-top: 8px;
+    }
+
+    .report-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    }
+
+    .report-card-header {
+        border-bottom: 1px solid #e5e7eb;
+        padding: 18px 22px;
+    }
+
+    .report-card-title {
+        color: #0f172a;
+        font-size: 18px;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .report-card-note {
+        color: #64748b;
+        font-size: 13px;
+        margin-top: 4px;
+    }
+
+    .report-card-body {
+        padding: 22px;
+    }
+
+    .report-grid {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .report-field label,
+    .report-section-label {
+        color: #334155;
+        display: block;
+        font-size: 13px;
+        font-weight: 800;
+        margin-bottom: 8px;
+    }
+
+    .report-input {
+        border: 1px solid #cbd5e1;
+        border-radius: 7px;
+        color: #0f172a;
+        min-height: 42px;
+        padding: 8px 11px;
+        width: 100%;
+    }
+
+    .report-input:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        outline: none;
+    }
+
+    .report-quick-row,
+    .report-format-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .report-chip,
+    .report-format-card {
+        border: 1px solid #cbd5e1;
+        border-radius: 999px;
+        color: #334155;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 800;
+        padding: 8px 12px;
+    }
+
+    .report-chip:hover,
+    .report-format-card:hover {
+        background: #f8fafc;
+    }
+
+    .report-format-card {
+        align-items: center;
+        border-radius: 8px;
+        display: flex;
+        gap: 10px;
+        min-width: 140px;
+    }
+
+    .report-format-card.is-active {
+        background: #eff6ff;
+        border-color: #2563eb;
+        color: #1d4ed8;
+    }
+
+    .report-check-grid {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        display: grid;
+        gap: 8px;
+        max-height: 168px;
+        overflow: auto;
+        padding: 10px;
+    }
+
+    .report-check {
+        align-items: center;
+        display: flex;
+        gap: 9px;
+        min-height: 30px;
+    }
+
+    .report-check span {
+        color: #1f2937;
+        font-size: 13px;
+    }
+
+    .report-muted {
+        color: #94a3b8;
+        font-size: 13px;
+    }
+
+    .report-alert {
+        border-radius: 8px;
+        font-size: 14px;
+        padding: 12px 14px;
+    }
+
+    .report-alert-success {
+        background: #ecfdf5;
+        border: 1px solid #bbf7d0;
+        color: #047857;
+    }
+
+    .report-alert-error {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #991b1b;
+    }
+
+    .report-actions {
+        align-items: center;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        margin-top: 22px;
+        padding-top: 18px;
+    }
+
+    .report-button {
+        align-items: center;
+        border: 1px solid #cbd5e1;
+        border-radius: 7px;
+        display: inline-flex;
+        font-size: 14px;
+        font-weight: 800;
+        justify-content: center;
+        min-height: 40px;
+        padding: 9px 14px;
+    }
+
+    .report-button-primary {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #ffffff;
+    }
+
+    .report-button-primary:disabled {
+        background: #94a3b8;
+        border-color: #94a3b8;
+        cursor: not-allowed;
+    }
+
+    .report-table {
+        border-collapse: collapse;
+        min-width: 920px;
+        width: 100%;
+    }
+
+    .report-table th {
+        background: #f8fafc;
+        border-bottom: 1px solid #e5e7eb;
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        padding: 12px 16px;
+        text-align: left;
+        text-transform: uppercase;
+    }
+
+    .report-table td {
+        border-bottom: 1px solid #f1f5f9;
+        color: #0f172a;
+        font-size: 13px;
+        padding: 14px 16px;
+        vertical-align: top;
+    }
+
+    .report-badge {
+        border-radius: 999px;
+        display: inline-flex;
+        font-size: 12px;
+        font-weight: 800;
+        padding: 5px 9px;
+    }
+
+    .report-badge-pdf { background: #fef2f2; color: #b91c1c; }
+    .report-badge-excel { background: #ecfdf5; color: #047857; }
+    .report-badge-pending { background: #fffbeb; color: #b45309; }
+    .report-badge-processing { background: #eff6ff; color: #1d4ed8; }
+    .report-badge-completed { background: #ecfdf5; color: #047857; }
+    .report-badge-failed { background: #fef2f2; color: #b91c1c; }
+
+    .report-empty {
+        color: #94a3b8;
+        padding: 28px;
+        text-align: center;
+    }
+
+    @media (max-width: 860px) {
+        .report-header,
+        .report-actions {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .report-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div x-data="reportsPage()" x-init="init()" class="report-page">
+    <div class="report-header">
+        <div>
+            <h1 class="report-title">Laporan</h1>
+            <p class="report-subtitle">Buat dan unduh laporan transaksi parkir berdasarkan periode, lokasi, dan juru parkir.</p>
+        </div>
+        <button type="button" class="report-button" @click="loadReports()">Refresh Riwayat</button>
     </div>
 
-    <!-- Report Generation Form -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <h3 class="text-lg font-semibold text-gray-900 mb-4">Generate Laporan Baru</h3>
-        <form @submit.prevent="generateReport()" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <!-- Date Range -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Dari Tanggal</label>
-                    <input type="date" x-model="reportForm.dateFrom" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+    <template x-if="successMessage">
+        <div class="report-alert report-alert-success" x-text="successMessage"></div>
+    </template>
+    <template x-if="errorMessage">
+        <div class="report-alert report-alert-error" x-text="errorMessage"></div>
+    </template>
+
+    <section class="report-card">
+        <div class="report-card-header">
+            <h2 class="report-card-title">Generate Laporan Baru</h2>
+            <p class="report-card-note">Maksimal rentang 90 hari. Kosongkan lokasi atau juru parkir untuk mengambil semua data.</p>
+        </div>
+
+        <div class="report-card-body">
+            <form @submit.prevent="generateReport()">
+                <div class="report-grid">
+                    <div class="report-field">
+                        <label>Dari Tanggal</label>
+                        <input type="date" x-model="reportForm.start_date" class="report-input" required>
+                    </div>
+
+                    <div class="report-field">
+                        <label>Sampai Tanggal</label>
+                        <input type="date" x-model="reportForm.end_date" class="report-input" required>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Sampai Tanggal</label>
-                    <input type="date" x-model="reportForm.dateTo" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required>
+                <div class="mt-4">
+                    <div class="report-section-label">Pilih Cepat</div>
+                    <div class="report-quick-row">
+                        <button type="button" class="report-chip" @click="setRange(0)">Hari ini</button>
+                        <button type="button" class="report-chip" @click="setRange(6)">7 hari</button>
+                        <button type="button" class="report-chip" @click="setRange(29)">30 hari</button>
+                        <button type="button" class="report-chip" @click="setThisMonth()">Bulan ini</button>
+                    </div>
                 </div>
 
-                <!-- Location Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Lokasi (Multi-select)</label>
-                    <select x-model="reportForm.locations" multiple class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                        <template x-for="location in locations" :key="location">
-                            <option :value="location" x-text="location"></option>
-                        </template>
-                    </select>
-                    <p class="text-xs text-gray-500 mt-1">Kosongkan untuk semua lokasi</p>
+                <div class="report-grid mt-5">
+                    <div>
+                        <div class="report-section-label">Lokasi</div>
+                        <div class="report-check-grid">
+                            <template x-if="locations.length === 0">
+                                <div class="report-muted">Belum ada lokasi.</div>
+                            </template>
+                            <template x-for="location in locations" :key="location">
+                                <label class="report-check">
+                                    <input type="checkbox" :value="location" x-model="reportForm.street_sections">
+                                    <span x-text="location"></span>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="report-section-label">Juru Parkir</div>
+                        <div class="report-check-grid">
+                            <template x-if="attendants.length === 0">
+                                <div class="report-muted">Belum ada juru parkir.</div>
+                            </template>
+                            <template x-for="attendant in attendants" :key="attendant.id">
+                                <label class="report-check">
+                                    <input type="checkbox" :value="attendant.id" x-model.number="reportForm.parking_attendant_ids">
+                                    <span><strong x-text="attendant.registration_number"></strong> - <span x-text="attendant.name"></span></span>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Attendant Filter -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Juru Parkir (Multi-select)</label>
-                    <select x-model="reportForm.attendants" multiple class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                        <template x-for="attendant in attendants" :key="attendant.id">
-                            <option :value="attendant.id" x-text="attendant.name"></option>
-                        </template>
-                    </select>
-                    <p class="text-xs text-gray-500 mt-1">Kosongkan untuk semua juru parkir</p>
+                <div class="mt-5">
+                    <div class="report-section-label">Format Laporan</div>
+                    <div class="report-format-row">
+                        <label :class="reportForm.type === 'pdf' ? 'report-format-card is-active' : 'report-format-card'">
+                            <input type="radio" x-model="reportForm.type" value="pdf">
+                            <span>PDF</span>
+                        </label>
+                        <label :class="reportForm.type === 'excel' ? 'report-format-card is-active' : 'report-format-card'">
+                            <input type="radio" x-model="reportForm.type" value="excel">
+                            <span>Excel</span>
+                        </label>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Format Selection -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Format Laporan</label>
-                <div class="flex items-center space-x-6">
-                    <label class="flex items-center">
-                        <input type="radio" x-model="reportForm.format" value="pdf" class="w-4 h-4 text-blue-600">
-                        <span class="ml-2 text-sm text-gray-700">PDF</span>
-                    </label>
-                    <label class="flex items-center">
-                        <input type="radio" x-model="reportForm.format" value="excel" class="w-4 h-4 text-blue-600">
-                        <span class="ml-2 text-sm text-gray-700">Excel</span>
-                    </label>
+                <div class="report-actions">
+                    <button type="button" class="report-button" @click="resetFilters()">Reset Filter</button>
+                    <button type="submit" :disabled="isGenerating" class="report-button report-button-primary">
+                        <span x-text="isGenerating ? 'Membuat laporan...' : 'Generate Laporan'"></span>
+                    </button>
                 </div>
-            </div>
+            </form>
+        </div>
+    </section>
 
-            <!-- Submit Button -->
-            <div class="flex items-center justify-end pt-4 border-t">
-                <button type="submit" :disabled="isGenerating" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium flex items-center space-x-2">
-                    <span x-show="!isGenerating">Generate Laporan</span>
-                    <span x-show="isGenerating" class="flex items-center space-x-2">
-                        <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span>Memproses...</span>
-                    </span>
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Reports List -->
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-semibold text-gray-900">Laporan Terbaru</h3>
+    <section class="report-card">
+        <div class="report-card-header">
+            <h2 class="report-card-title">Laporan Terbaru</h2>
+            <p class="report-card-note">Daftar 25 laporan terakhir yang dibuat oleh admin ini.</p>
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-50 border-b border-gray-200">
+            <table class="report-table">
+                <thead>
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Tanggal Dibuat</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Format</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Aksi</th>
+                        <th>Tanggal Dibuat</th>
+                        <th>Periode</th>
+                        <th>Filter</th>
+                        <th>Format</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-200">
+                <tbody>
                     <template x-for="report in reports" :key="report.id">
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-6 py-4 text-sm text-gray-900" x-text="formatDate(report.created_at)"></td>
-                            <td class="px-6 py-4 text-sm text-gray-900" x-text="report.type.toUpperCase()"></td>
-                            <td class="px-6 py-4 text-sm">
+                        <tr>
+                            <td x-text="formatDateTime(report.created_at)"></td>
+                            <td x-text="formatPeriod(report.filters)"></td>
+                            <td x-text="formatFilters(report.filters)"></td>
+                            <td>
+                                <span :class="report.type === 'pdf' ? 'report-badge report-badge-pdf' : 'report-badge report-badge-excel'" x-text="report.type.toUpperCase()"></span>
+                            </td>
+                            <td>
                                 <span :class="getStatusBadgeClass(report.status)" x-text="getStatusLabel(report.status)"></span>
+                                <template x-if="report.error_message">
+                                    <div class="text-xs text-red-600 mt-1" x-text="report.error_message"></div>
+                                </template>
                             </td>
-                            <td class="px-6 py-4 text-sm space-x-2">
+                            <td>
                                 <template x-if="report.status === 'completed'">
-                                    <a :href="`/api/reports/${report.id}/download`" class="text-blue-600 hover:text-blue-700 font-medium">
-                                        Download
-                                    </a>
+                                    <a :href="`/api/reports/${report.id}/download`" class="text-blue-600 hover:text-blue-700 font-bold">Download</a>
                                 </template>
-                                <template x-if="report.status === 'failed'">
-                                    <span class="text-red-600 text-xs" x-text="report.error_message"></span>
+                                <template x-if="report.status !== 'completed'">
+                                    <span class="text-gray-400">-</span>
                                 </template>
                             </td>
+                        </tr>
+                    </template>
+                    <template x-if="reports.length === 0">
+                        <tr>
+                            <td colspan="6" class="report-empty">Belum ada laporan. Generate laporan pertama dari form di atas.</td>
                         </tr>
                     </template>
                 </tbody>
             </table>
         </div>
-    </div>
+    </section>
 </div>
 
 <script>
 function reportsPage() {
     return {
         reportForm: {
-            dateFrom: '',
-            dateTo: '',
-            locations: [],
-            attendants: [],
-            format: 'pdf',
+            start_date: '',
+            end_date: '',
+            street_sections: [],
+            parking_attendant_ids: [],
+            type: 'pdf',
         },
         reports: [],
         locations: [],
         attendants: [],
         isGenerating: false,
-        refreshInterval: null,
+        successMessage: '',
+        errorMessage: '',
 
         async init() {
-            // Set default date range (last 30 days)
-            const today = new Date();
-            const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-            this.reportForm.dateTo = this.formatDateForInput(today);
-            this.reportForm.dateFrom = this.formatDateForInput(thirtyDaysAgo);
-
-            await this.loadLocations();
-            await this.loadAttendants();
-            await this.loadReports();
-
-            // Auto-refresh reports every 5 seconds
-            this.refreshInterval = setInterval(() => {
-                this.loadReports();
-            }, 5000);
-        },
-
-        async loadLocations() {
-            try {
-                const response = await fetch('/api/transactions?limit=1000', {
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    }
-                });
-                const data = await response.json();
-                this.locations = [...new Set(data.data.map(t => t.street_section))];
-            } catch (error) {
-                console.error('Error loading locations:', error);
-            }
+            this.setRange(29);
+            await Promise.all([this.loadAttendants(), this.loadReports()]);
         },
 
         async loadAttendants() {
             try {
                 const response = await fetch('/api/attendants', {
+                    credentials: 'same-origin',
                     headers: {
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     }
                 });
+
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+
                 const data = await response.json();
                 this.attendants = data.data || [];
+                this.locations = data.locations || [...new Set(this.attendants.map((item) => item.street_section).filter(Boolean))];
             } catch (error) {
+                this.errorMessage = 'Gagal memuat data juru parkir.';
                 console.error('Error loading attendants:', error);
             }
         },
@@ -187,47 +471,83 @@ function reportsPage() {
         async loadReports() {
             try {
                 const response = await fetch('/api/reports', {
+                    credentials: 'same-origin',
                     headers: {
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     }
                 });
+
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
 
                 if (!response.ok) throw new Error('Failed to load reports');
 
                 const data = await response.json();
                 this.reports = data.data || [];
             } catch (error) {
+                this.errorMessage = 'Gagal memuat riwayat laporan.';
                 console.error('Error loading reports:', error);
             }
         },
 
         async generateReport() {
             this.isGenerating = true;
+            this.successMessage = '';
+            this.errorMessage = '';
 
             try {
                 const response = await fetch('/api/reports/generate', {
                     method: 'POST',
+                    credentials: 'same-origin',
                     headers: {
+                        'Accept': 'application/json',
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     },
                     body: JSON.stringify(this.reportForm),
                 });
 
-                if (!response.ok) {
-                    const error = await response.json();
-                    alert(error.message || 'Gagal membuat laporan');
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    this.errorMessage = data.message || 'Gagal membuat laporan.';
                     return;
                 }
 
-                alert('Laporan sedang diproses. Silakan tunggu...');
+                this.successMessage = 'Laporan berhasil dibuat dan siap diunduh.';
                 await this.loadReports();
             } catch (error) {
+                this.errorMessage = 'Terjadi kesalahan saat membuat laporan.';
                 console.error('Error generating report:', error);
-                alert('Terjadi kesalahan saat membuat laporan');
             } finally {
                 this.isGenerating = false;
             }
+        },
+
+        setRange(daysAgo) {
+            const end = new Date();
+            const start = new Date();
+            start.setDate(end.getDate() - daysAgo);
+            this.reportForm.start_date = this.formatDateForInput(start);
+            this.reportForm.end_date = this.formatDateForInput(end);
+        },
+
+        setThisMonth() {
+            const now = new Date();
+            this.reportForm.start_date = this.formatDateForInput(new Date(now.getFullYear(), now.getMonth(), 1));
+            this.reportForm.end_date = this.formatDateForInput(now);
+        },
+
+        resetFilters() {
+            this.setRange(29);
+            this.reportForm.street_sections = [];
+            this.reportForm.parking_attendant_ids = [];
+            this.reportForm.type = 'pdf';
+            this.successMessage = '';
+            this.errorMessage = '';
         },
 
         formatDateForInput(date) {
@@ -237,42 +557,49 @@ function reportsPage() {
             return `${year}-${month}-${day}`;
         },
 
-        formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleString('id-ID', {
-                year: 'numeric',
-                month: '2-digit',
+        formatDateTime(dateString) {
+            if (!dateString) return '-';
+
+            return new Date(dateString).toLocaleString('id-ID', {
                 day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
             });
+        },
+
+        formatPeriod(filters) {
+            if (!filters?.start_date || !filters?.end_date) return '-';
+            return `${filters.start_date} s/d ${filters.end_date}`;
+        },
+
+        formatFilters(filters) {
+            const parts = [];
+            if (filters?.street_sections?.length) parts.push(`${filters.street_sections.length} lokasi`);
+            if (filters?.parking_attendant_ids?.length) parts.push(`${filters.parking_attendant_ids.length} juru parkir`);
+            return parts.length ? parts.join(', ') : 'Semua data';
         },
 
         getStatusLabel(status) {
             const labels = {
-                'pending': 'Pending',
-                'processing': 'Memproses',
-                'completed': 'Selesai',
-                'failed': 'Gagal'
+                pending: 'Pending',
+                processing: 'Memproses',
+                completed: 'Selesai',
+                failed: 'Gagal',
             };
-            return labels[status] || status;
+            return labels[status] || status || '-';
         },
 
         getStatusBadgeClass(status) {
             const classes = {
-                'pending': 'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800',
-                'processing': 'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800',
-                'completed': 'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800',
-                'failed': 'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800'
+                pending: 'report-badge report-badge-pending',
+                processing: 'report-badge report-badge-processing',
+                completed: 'report-badge report-badge-completed',
+                failed: 'report-badge report-badge-failed',
             };
-            return classes[status] || classes['pending'];
+            return classes[status] || classes.pending;
         },
-
-        destroy() {
-            if (this.refreshInterval) {
-                clearInterval(this.refreshInterval);
-            }
-        }
     }
 }
 </script>

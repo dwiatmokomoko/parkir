@@ -33,7 +33,7 @@ class StoreAttendantRequest extends FormRequest
             'name' => 'required|string|max:255',
             'street_section' => 'required|string|max:255',
             'location_side' => 'nullable|string|max:50',
-            'bank_account_number' => 'required|string|max:50',
+            'bank_account_number' => 'nullable|string|max:50',
             'bank_name' => 'nullable|string|max:100',
             'pin' => [
                 'required',
@@ -54,7 +54,6 @@ class StoreAttendantRequest extends FormRequest
             'registration_number.required' => 'Nomor registrasi wajib diisi.',
             'name.required' => 'Nama wajib diisi.',
             'street_section.required' => 'Ruas jalan wajib diisi.',
-            'bank_account_number.required' => 'Nomor rekening bank wajib diisi.',
             'pin.required' => 'PIN wajib diisi.',
             'pin.size' => 'PIN harus 6 digit.',
             'pin.regex' => 'PIN harus berupa 6 digit angka.',
