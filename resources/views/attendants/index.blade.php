@@ -3,7 +3,7 @@
 @section('title', 'Juru Parkir - Sistem Monitoring Pembayaran Parkir')
 
 @section('content')
-<div x-data="attendantsPage()" @load="init()" class="space-y-6">
+<div x-data="attendantsPage()" x-init="init()" class="space-y-6">
     <!-- Page Header -->
     <div class="flex items-center justify-between">
         <div>
@@ -56,9 +56,16 @@
                             <td class="px-6 py-4 text-sm font-medium text-blue-600" x-text="attendant.registration_number"></td>
                             <td class="px-6 py-4 text-sm text-gray-900" x-text="attendant.name"></td>
                             <td class="px-6 py-4 text-sm text-gray-900" x-text="attendant.street_section"></td>
-                            <td class="px-6 py-4 text-sm text-gray-900" x-text="attendant.transaction_count || 0"></td>
+                            <td class="px-6 py-4 text-sm text-gray-900">
+                                <div class="font-medium" x-text="attendant.transaction_count || 0"></div>
+                                <div class="text-xs text-gray-500">
+                                    <span x-text="attendant.success_transaction_count || 0"></span> berhasil,
+                                    <span x-text="attendant.pending_transaction_count || 0"></span> pending
+                                </div>
+                            </td>
                             <td class="px-6 py-4 text-sm font-medium text-gray-900">
                                 Rp <span x-text="formatCurrency(attendant.total_revenue || 0)"></span>
+                                <div class="text-xs font-normal text-gray-500">Dari pembayaran berhasil</div>
                             </td>
                             <td class="px-6 py-4 text-sm">
                                 <span :class="attendant.is_active ? 'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800' : 'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800'" x-text="attendant.is_active ? 'Aktif' : 'Tidak Aktif'"></span>
@@ -170,16 +177,23 @@ function attendantsPage() {
                 });
 
                 const response = await fetch(`/api/attendants?${params}`, {
+                    credentials: 'same-origin',
                     headers: {
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     }
                 });
+
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
 
                 if (!response.ok) throw new Error('Failed to load attendants');
 
                 const data = await response.json();
                 this.attendants = data.data || [];
-                this.locations = [...new Set(this.attendants.map(a => a.street_section))];
+                this.locations = data.locations || [...new Set(this.attendants.map(a => a.street_section).filter(Boolean))];
             } catch (error) {
                 console.error('Error loading attendants:', error);
             }

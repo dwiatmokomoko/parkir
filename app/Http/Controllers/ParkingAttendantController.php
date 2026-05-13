@@ -24,13 +24,58 @@ class ParkingAttendantController extends Controller
      * 
      * Requirements: 7.6
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $attendants = ParkingAttendant::all();
+        $validated = $request->validate([
+            'search' => 'nullable|string|max:100',
+            'location' => 'nullable|string|max:255',
+            'status' => 'nullable|in:active,inactive',
+        ]);
+
+        $attendants = ParkingAttendant::query()
+            ->withCount([
+                'transactions as transaction_count',
+                'transactions as success_transaction_count' => fn ($query) => $query->where('payment_status', 'success'),
+                'transactions as pending_transaction_count' => fn ($query) => $query->where('payment_status', 'pending'),
+                'transactions as expired_transaction_count' => fn ($query) => $query->where('payment_status', 'expired'),
+            ])
+            ->withSum([
+                'transactions as total_revenue' => fn ($query) => $query->where('payment_status', 'success'),
+            ], 'amount')
+            ->when($validated['search'] ?? null, function ($query, string $search) {
+                $search = strtolower($search);
+
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->whereRaw('LOWER(name) LIKE ?', ["%{$search}%"])
+                        ->orWhereRaw('LOWER(registration_number) LIKE ?', ["%{$search}%"]);
+                });
+            })
+            ->when($validated['location'] ?? null, fn ($query, string $location) => $query->where('street_section', $location))
+            ->when(($validated['status'] ?? null) === 'active', fn ($query) => $query->where('is_active', true))
+            ->when(($validated['status'] ?? null) === 'inactive', fn ($query) => $query->where('is_active', false))
+            ->orderBy('registration_number')
+            ->get()
+            ->map(function (ParkingAttendant $attendant) {
+                $attendant->transaction_count = (int) ($attendant->transaction_count ?? 0);
+                $attendant->success_transaction_count = (int) ($attendant->success_transaction_count ?? 0);
+                $attendant->pending_transaction_count = (int) ($attendant->pending_transaction_count ?? 0);
+                $attendant->expired_transaction_count = (int) ($attendant->expired_transaction_count ?? 0);
+                $attendant->total_revenue = (float) ($attendant->total_revenue ?? 0);
+
+                return $attendant;
+            });
+
+        $locations = ParkingAttendant::query()
+            ->whereNotNull('street_section')
+            ->distinct()
+            ->orderBy('street_section')
+            ->pluck('street_section')
+            ->values();
 
         return response()->json([
             'success' => true,
             'data' => $attendants,
+            'locations' => $locations,
         ]);
     }
 
