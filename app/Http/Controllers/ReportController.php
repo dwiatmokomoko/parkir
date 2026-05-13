@@ -6,7 +6,6 @@ use App\Models\Report;
 use App\Jobs\GenerateReportJob;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
@@ -115,9 +114,9 @@ class ReportController extends Controller
      * Download generated report file
      *
      * @param int $reportId
-     * @return Response|JsonResponse
+     * @return mixed
      */
-    public function download(int $reportId): Response|JsonResponse
+    public function download(int $reportId)
     {
         $report = Report::findOrFail($reportId);
         
