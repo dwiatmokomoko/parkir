@@ -772,12 +772,21 @@ function dashboard() {
                         x: {
                             beginAtZero: horizontal,
                             grid: { display: horizontal },
-                            ticks: { maxRotation: 0, autoSkip: true },
+                            ticks: horizontal ? {
+                                callback: (value) => isMoney
+                                    ? 'Rp ' + Number(value).toLocaleString('id-ID')
+                                    : value,
+                            } : {
+                                maxRotation: 0,
+                                autoSkip: true,
+                            },
                         },
                         y: {
                             beginAtZero: !horizontal,
                             grid: { color: '#f3f4f6' },
-                            ticks: {
+                            ticks: horizontal ? {
+                                autoSkip: false,
+                            } : {
                                 callback: (value) => isMoney
                                     ? 'Rp ' + Number(value).toLocaleString('id-ID')
                                     : value,
@@ -822,13 +831,142 @@ function dashboard() {
 
         updateCharts(data) {
             try {
-                this.updateRevenueChart(this.charts.daily, data.dailyRevenue || [], 'label');
-                this.updateRevenueChart(this.charts.monthly, data.monthlyRevenue || [], 'label');
-                this.updateChart(this.charts.location, data.locationStats || [], 'street_section', 'count');
-                this.updateChart(this.charts.vehicle, data.vehicleStats || [], 'vehicle_type', 'count');
+                const transactions = this.asArray(data.transactions || data.recent_transactions);
+                const dailyRows = this.prepareRevenueRows(
+                    this.asArray(data.dailyRevenue || data.daily_revenue),
+                    transactions,
+                    'day'
+                );
+                const monthlyRows = this.prepareRevenueRows(
+                    this.asArray(data.monthlyRevenue || data.monthly_revenue),
+                    transactions,
+                    'month'
+                );
+                const locationRows = this.prepareStatRows(
+                    this.asArray(data.locationStats || data.location_stats),
+                    transactions,
+                    'street_section',
+                    'Tidak diketahui'
+                );
+                const vehicleRows = this.prepareStatRows(
+                    this.asArray(data.vehicleStats || data.vehicle_stats),
+                    transactions,
+                    'vehicle_type',
+                    'Tidak diketahui'
+                );
+
+                this.updateRevenueChart(this.charts.daily, dailyRows, 'label');
+                this.updateRevenueChart(this.charts.monthly, monthlyRows, 'label');
+                this.updateChart(this.charts.location, locationRows, 'street_section', 'count');
+                this.updateChart(this.charts.vehicle, vehicleRows, 'vehicle_type', 'count');
             } catch (error) {
                 console.error('Error updating dashboard charts:', error);
             }
+        },
+
+        asArray(value) {
+            if (Array.isArray(value)) return value;
+            if (value && typeof value === 'object') return Object.values(value);
+            return [];
+        },
+
+        hasVisibleValues(rows, keys = ['revenue', 'count', 'chart_value']) {
+            return this.asArray(rows).some((row) => keys.some((key) => Number(row?.[key] || 0) > 0));
+        },
+
+        prepareRevenueRows(rows, transactions, period) {
+            if (this.hasVisibleValues(rows)) {
+                return rows;
+            }
+
+            return this.buildRevenueRowsFromTransactions(transactions, period);
+        },
+
+        prepareStatRows(rows, transactions, key, fallbackLabel) {
+            if (this.hasVisibleValues(rows, ['count'])) {
+                return rows.map((row) => ({
+                    ...row,
+                    [key]: row[key] || fallbackLabel,
+                    count: Number(row.count || 0),
+                }));
+            }
+
+            return this.groupTransactionsBy(transactions, key, fallbackLabel);
+        },
+
+        buildRevenueRowsFromTransactions(transactions, period) {
+            const now = new Date();
+            const rows = [];
+            const total = period === 'month' ? 12 : 30;
+
+            for (let index = total - 1; index >= 0; index--) {
+                const date = new Date(now);
+                if (period === 'month') {
+                    date.setMonth(now.getMonth() - index, 1);
+                    date.setHours(0, 0, 0, 0);
+                } else {
+                    date.setDate(now.getDate() - index);
+                    date.setHours(0, 0, 0, 0);
+                }
+
+                const key = period === 'month' ? this.formatMonthKey(date) : this.formatDateKey(date);
+                rows.push({
+                    date: period === 'day' ? key : undefined,
+                    month: period === 'month' ? key : undefined,
+                    label: period === 'month'
+                        ? date.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })
+                        : date.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit' }),
+                    revenue: 0,
+                    count: 0,
+                });
+            }
+
+            const rowByKey = new Map(rows.map((row) => [period === 'month' ? row.month : row.date, row]));
+
+            this.asArray(transactions).forEach((transaction) => {
+                const transactionDate = new Date(transaction.created_at);
+                if (Number.isNaN(transactionDate.getTime())) return;
+
+                const key = period === 'month'
+                    ? this.formatMonthKey(transactionDate)
+                    : this.formatDateKey(transactionDate);
+                const row = rowByKey.get(key);
+                if (!row) return;
+
+                row.count += 1;
+                if (transaction.payment_status === 'success') {
+                    row.revenue += Number(transaction.amount || 0);
+                }
+            });
+
+            return rows;
+        },
+
+        groupTransactionsBy(transactions, key, fallbackLabel) {
+            const counts = new Map();
+
+            this.asArray(transactions).forEach((transaction) => {
+                const label = transaction[key] || fallbackLabel;
+                counts.set(label, (counts.get(label) || 0) + 1);
+            });
+
+            return Array.from(counts.entries())
+                .map(([label, count]) => ({ [key]: label, count }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 10);
+        },
+
+        formatDateKey(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        },
+
+        formatMonthKey(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            return `${year}-${month}`;
         },
 
         updateRevenueChart(chart, rows, labelKey) {

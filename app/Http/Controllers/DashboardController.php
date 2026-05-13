@@ -113,7 +113,8 @@ class DashboardController extends Controller
                 ->map(fn (Transaction $transaction) => [
                     'street_section' => $transaction->street_section ?: 'Tidak diketahui',
                     'count' => (int) $transaction->count,
-                ]);
+                ])
+                ->values();
 
             $vehicleStats = Transaction::groupBy('vehicle_type')
                 ->selectRaw('vehicle_type, COUNT(*) as count')
@@ -122,7 +123,8 @@ class DashboardController extends Controller
                 ->map(fn (Transaction $transaction) => [
                     'vehicle_type' => $transaction->vehicle_type ?: 'Tidak diketahui',
                     'count' => (int) $transaction->count,
-                ]);
+                ])
+                ->values();
 
             $paymentStatus = [
                 'success' => (int) ($statusDistribution['success'] ?? 0),
@@ -147,6 +149,10 @@ class DashboardController extends Controller
                 'monthlyRevenue' => $monthlyRevenue,
                 'locationStats' => $locationStats,
                 'vehicleStats' => $vehicleStats,
+                'daily_revenue' => $dailyRevenue,
+                'monthly_revenue' => $monthlyRevenue,
+                'location_stats' => $locationStats,
+                'vehicle_stats' => $vehicleStats,
                 'today_revenue' => $todayRevenue,
                 'month_revenue' => $monthRevenue,
                 'today_transactions' => $todayTransactions,
