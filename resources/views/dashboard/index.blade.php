@@ -334,6 +334,105 @@
         background: linear-gradient(90deg, #059669, #34d399);
     }
 
+    .dash-donut-body {
+        align-items: center;
+        display: grid;
+        gap: 24px;
+        grid-template-columns: minmax(170px, 220px) minmax(0, 1fr);
+    }
+
+    .dash-donut {
+        aspect-ratio: 1;
+        background: conic-gradient(var(--donut-gradient, #e2e8f0));
+        border-radius: 999px;
+        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06), 0 14px 30px rgba(15, 23, 42, 0.08);
+        display: grid;
+        margin: 0 auto;
+        max-width: 210px;
+        place-items: center;
+        position: relative;
+        width: 100%;
+    }
+
+    .dash-donut::after {
+        background: #ffffff;
+        border-radius: inherit;
+        box-shadow: inset 0 0 0 1px #e5e7eb;
+        content: "";
+        height: 62%;
+        position: absolute;
+        width: 62%;
+    }
+
+    .dash-donut-center {
+        color: #0f172a;
+        display: grid;
+        gap: 2px;
+        place-items: center;
+        position: relative;
+        z-index: 1;
+    }
+
+    .dash-donut-total {
+        font-size: 26px;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .dash-donut-caption {
+        color: #64748b;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .dash-donut-legend {
+        display: grid;
+        gap: 12px;
+    }
+
+    .dash-donut-item {
+        align-items: center;
+        background: rgba(248, 250, 252, 0.88);
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        display: grid;
+        gap: 8px;
+        grid-template-columns: 12px minmax(0, 1fr) auto;
+        padding: 10px 12px;
+    }
+
+    .dash-donut-swatch {
+        border-radius: 999px;
+        height: 12px;
+        width: 12px;
+    }
+
+    .dash-donut-name {
+        color: #334155;
+        font-size: 13px;
+        font-weight: 800;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .dash-donut-metric {
+        color: #0f172a;
+        font-size: 12px;
+        font-weight: 800;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .dash-donut-submetric {
+        color: #64748b;
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        margin-top: 2px;
+    }
+
     .dash-empty-chart {
         align-items: center;
         color: #94a3b8;
@@ -500,6 +599,14 @@
             grid-template-columns: 62px minmax(0, 1fr) 78px;
         }
 
+        .dash-donut-body {
+            grid-template-columns: 1fr;
+        }
+
+        .dash-donut {
+            max-width: 180px;
+        }
+
         .dash-page-controls {
             justify-content: space-between;
             width: 100%;
@@ -632,21 +739,30 @@
                     <p class="dash-panel-caption">Semua transaksi per jenis kendaraan</p>
                 </div>
             </div>
-            <div class="dash-chart-body dash-bars-body">
-                <div class="dash-bar-list" x-show="vehicleBars.length > 0">
-                    <template x-for="item in vehicleBars" :key="item.label">
-                        <div class="dash-bar-row">
-                            <div class="dash-bar-meta">
-                                <span class="dash-bar-label" x-text="item.label"></span>
-                                <span class="dash-bar-value" x-text="item.display"></span>
-                            </div>
-                            <div class="dash-bar-track">
-                                <div class="dash-bar-fill dash-bar-fill-vehicle" :style="`width: ${item.percent}%`"></div>
-                            </div>
+            <div class="dash-chart-body dash-donut-body">
+                <template x-if="vehicleDonut.length > 0">
+                    <div class="dash-donut" :style="`--donut-gradient: ${vehicleDonutGradient}`">
+                        <div class="dash-donut-center">
+                            <div class="dash-donut-total" x-text="vehicleTotal"></div>
+                            <div class="dash-donut-caption">Transaksi</div>
+                        </div>
+                    </div>
+                </template>
+
+                <div class="dash-donut-legend" x-show="vehicleDonut.length > 0">
+                    <template x-for="item in vehicleDonut" :key="item.label">
+                        <div class="dash-donut-item">
+                            <span class="dash-donut-swatch" :style="`background: ${item.color}`"></span>
+                            <span class="dash-donut-name" x-text="item.label"></span>
+                            <span class="dash-donut-metric">
+                                <span x-text="item.value"></span>
+                                <span class="dash-donut-submetric" x-text="item.percentLabel"></span>
+                            </span>
                         </div>
                     </template>
                 </div>
-                <div class="dash-empty-chart" x-show="vehicleBars.length === 0">
+
+                <div class="dash-empty-chart" x-show="vehicleDonut.length === 0">
                     Belum ada data jenis kendaraan.
                 </div>
             </div>
@@ -764,6 +880,9 @@ function dashboard() {
         monthlyBars: [],
         locationBars: [],
         vehicleBars: [],
+        vehicleDonut: [],
+        vehicleDonutGradient: '#e2e8f0',
+        vehicleTotal: 0,
         refreshInterval: null,
         loading: false,
         lastUpdated: '',
@@ -1073,6 +1192,9 @@ function dashboard() {
                     'count',
                     true
                 );
+                this.vehicleDonut = this.toDonutItems(vehicleRows, (row) => this.getVehicleLabel(row.vehicle_type || row.label));
+                this.vehicleTotal = this.vehicleDonut.reduce((total, item) => total + item.value, 0);
+                this.vehicleDonutGradient = this.buildDonutGradient(this.vehicleDonut);
 
                 this.updateRevenueChart(this.charts.daily, dailyRows, 'label');
                 this.updateRevenueChart(this.charts.monthly, monthlyRows, 'label');
@@ -1195,6 +1317,41 @@ function dashboard() {
                 ...item,
                 percent: item.value > 0 ? Math.max(4, Math.round((item.value / maxValue) * 100)) : 0,
             }));
+        },
+
+        toDonutItems(rows, labelResolver) {
+            const colors = ['#0ea5e9', '#f59e0b', '#10b981', '#8b5cf6', '#ef4444', '#14b8a6'];
+            const items = this.asArray(rows)
+                .map((row, index) => ({
+                    label: String(labelResolver(row) || 'Tidak diketahui'),
+                    value: Number(row.count ?? row.value ?? 0),
+                    color: colors[index % colors.length],
+                }))
+                .filter((item) => item.value > 0);
+
+            const total = items.reduce((sum, item) => sum + item.value, 0);
+
+            return items.map((item) => ({
+                ...item,
+                percent: total > 0 ? (item.value / total) * 100 : 0,
+                percentLabel: total > 0
+                    ? new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 }).format((item.value / total) * 100) + '%'
+                    : '0%',
+            }));
+        },
+
+        buildDonutGradient(items) {
+            if (!items.length) return '#e2e8f0 0% 100%';
+
+            let cursor = 0;
+            const segments = items.map((item, index) => {
+                const start = cursor;
+                const end = index === items.length - 1 ? 100 : cursor + item.percent;
+                cursor = end;
+                return `${item.color} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
+            });
+
+            return segments.join(', ');
         },
 
         formatDateKey(date) {
