@@ -639,7 +639,7 @@ function dashboard() {
                     failed: Number(data.paymentStatus?.failed ?? data.status_distribution?.failed ?? 0),
                     expired: Number(data.paymentStatus?.expired ?? data.status_distribution?.expired ?? 0),
                 };
-                this.transactions = data.transactions || [];
+                this.transactions = this.asArray(data.transactions || data.recent_transactions);
                 this.lastUpdated = 'Diperbarui ' + new Date().toLocaleTimeString('id-ID', {
                     hour: '2-digit',
                     minute: '2-digit',
@@ -831,25 +831,26 @@ function dashboard() {
 
         updateCharts(data) {
             try {
+                const charts = data.charts || {};
                 const transactions = this.asArray(data.transactions || data.recent_transactions);
                 const dailyRows = this.prepareRevenueRows(
-                    this.asArray(data.dailyRevenue || data.daily_revenue),
+                    this.asArray(charts.dailyRevenue || data.dailyRevenue || data.daily_revenue),
                     transactions,
                     'day'
                 );
                 const monthlyRows = this.prepareRevenueRows(
-                    this.asArray(data.monthlyRevenue || data.monthly_revenue),
+                    this.asArray(charts.monthlyRevenue || data.monthlyRevenue || data.monthly_revenue),
                     transactions,
                     'month'
                 );
                 const locationRows = this.prepareStatRows(
-                    this.asArray(data.locationStats || data.location_stats),
+                    this.asArray(charts.locations || data.locationStats || data.location_stats),
                     transactions,
                     'street_section',
                     'Tidak diketahui'
                 );
                 const vehicleRows = this.prepareStatRows(
-                    this.asArray(data.vehicleStats || data.vehicle_stats),
+                    this.asArray(charts.vehicles || data.vehicleStats || data.vehicle_stats),
                     transactions,
                     'vehicle_type',
                     'Tidak diketahui'
@@ -886,8 +887,8 @@ function dashboard() {
             if (this.hasVisibleValues(rows, ['count'])) {
                 return rows.map((row) => ({
                     ...row,
-                    [key]: row[key] || fallbackLabel,
-                    count: Number(row.count || 0),
+                    [key]: row[key] || row.label || fallbackLabel,
+                    count: Number(row.count ?? row.value ?? 0),
                 }));
             }
 
@@ -972,13 +973,13 @@ function dashboard() {
         updateRevenueChart(chart, rows, labelKey) {
             if (!chart) return;
 
-            const hasAnyRevenue = rows.some((row) => Number(row.revenue || 0) > 0);
+            const hasAnyRevenue = rows.some((row) => Number(row.revenue || 0) > 0 || row.type === 'money');
             const valueKey = hasAnyRevenue ? 'revenue' : 'count';
             const isMoney = hasAnyRevenue;
 
             chart.data.labels = rows.map((row) => row[labelKey] || row.date || row.month);
             chart.data.datasets[0].label = isMoney ? 'Pendapatan' : 'Jumlah transaksi';
-            chart.data.datasets[0].data = rows.map((row) => Number(row[valueKey] || 0));
+            chart.data.datasets[0].data = rows.map((row) => Number(row[valueKey] ?? row.value ?? 0));
             chart.options.plugins.tooltip.callbacks.label = (context) => isMoney
                 ? 'Rp ' + Number(context.raw || 0).toLocaleString('id-ID')
                 : String(context.raw || 0) + ' transaksi';
@@ -991,8 +992,8 @@ function dashboard() {
         updateChart(chart, rows, labelKey, valueKey) {
             if (!chart) return;
 
-            chart.data.labels = rows.map((row) => row[labelKey]);
-            chart.data.datasets[0].data = rows.map((row) => Number(row[valueKey] || 0));
+            chart.data.labels = rows.map((row) => row[labelKey] || row.label || 'Tidak diketahui');
+            chart.data.datasets[0].data = rows.map((row) => Number(row[valueKey] ?? row.value ?? 0));
             chart.update('none');
         },
 

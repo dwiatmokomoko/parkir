@@ -133,6 +133,38 @@ class DashboardController extends Controller
                 'expired' => (int) ($statusDistribution['expired'] ?? 0),
             ];
 
+            $dailyHasRevenue = $dailyRevenue->contains(fn (array $row) => (float) $row['revenue'] > 0);
+            $monthlyHasRevenue = $monthlyRevenue->contains(fn (array $row) => (float) $row['revenue'] > 0);
+
+            $charts = [
+                'dailyRevenue' => $dailyRevenue->map(fn (array $row) => [
+                    'label' => $row['label'],
+                    'revenue' => (float) $row['revenue'],
+                    'count' => (int) $row['count'],
+                    'value' => $dailyHasRevenue ? (float) $row['revenue'] : (int) $row['count'],
+                    'type' => $dailyHasRevenue ? 'money' : 'count',
+                ])->values(),
+                'monthlyRevenue' => $monthlyRevenue->map(fn (array $row) => [
+                    'label' => $row['label'],
+                    'revenue' => (float) $row['revenue'],
+                    'count' => (int) $row['count'],
+                    'value' => $monthlyHasRevenue ? (float) $row['revenue'] : (int) $row['count'],
+                    'type' => $monthlyHasRevenue ? 'money' : 'count',
+                ])->values(),
+                'locations' => $locationStats->map(fn (array $row) => [
+                    'label' => $row['street_section'],
+                    'street_section' => $row['street_section'],
+                    'count' => (int) $row['count'],
+                    'value' => (int) $row['count'],
+                ])->values(),
+                'vehicles' => $vehicleStats->map(fn (array $row) => [
+                    'label' => $row['vehicle_type'],
+                    'vehicle_type' => $row['vehicle_type'],
+                    'count' => (int) $row['count'],
+                    'value' => (int) $row['count'],
+                ])->values(),
+            ];
+
             return response()->json([
                 'success' => true,
                 'summary' => [
@@ -145,6 +177,7 @@ class DashboardController extends Controller
                 ],
                 'paymentStatus' => $paymentStatus,
                 'transactions' => $recentTransactions,
+                'charts' => $charts,
                 'dailyRevenue' => $dailyRevenue,
                 'monthlyRevenue' => $monthlyRevenue,
                 'locationStats' => $locationStats,
