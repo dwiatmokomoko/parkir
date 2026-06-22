@@ -48,9 +48,12 @@ class PaymentController extends Controller
             // Validate input
             $validated = $request->validate([
                 'vehicle_type' => 'required|in:motorcycle,car',
+                'license_plate' => ['required', 'string', 'max:20', 'regex:/^[A-Za-z0-9 .-]+$/'],
                 'attendant_id' => 'sometimes|integer|exists:parking_attendants,id',
                 'parking_attendant_id' => 'sometimes|integer|exists:parking_attendants,id',
             ]);
+
+            $validated['license_plate'] = strtoupper(trim($validated['license_plate']));
 
             // Get parking attendant
             $attendant = $request->authenticated_attendant;
@@ -96,6 +99,7 @@ class PaymentController extends Controller
                     'parking_attendant_id' => $attendant->id,
                     'street_section' => $attendant->street_section,
                     'vehicle_type' => $validated['vehicle_type'],
+                    'license_plate' => $validated['license_plate'],
                     'amount' => $rate,
                     'payment_status' => 'pending',
                     'retry_count' => 0,
@@ -128,6 +132,7 @@ class PaymentController extends Controller
                         'transaction_id' => $transaction->transaction_id,
                         'amount' => $transaction->amount,
                         'vehicle_type' => $transaction->vehicle_type,
+                        'license_plate' => $transaction->license_plate,
                     ],
                 ],
                 $attendant,
@@ -141,6 +146,7 @@ class PaymentController extends Controller
                 'qr_code' => $qrCode,
                 'amount' => $transaction->amount,
                 'vehicle_type' => $transaction->vehicle_type,
+                'license_plate' => $transaction->license_plate,
                 'payment_url' => $midtransResponse['redirect_url'] ?? null,
                 'qr_code_url' => $midtransResponse['qr_code_url'] ?? null,
                 'qris_acquirer' => $midtransResponse['acquirer'] ?? null,
@@ -149,6 +155,7 @@ class PaymentController extends Controller
                     'qr_code' => $qrCode,
                     'amount' => $transaction->amount,
                     'vehicle_type' => $transaction->vehicle_type,
+                    'license_plate' => $transaction->license_plate,
                     'payment_url' => $midtransResponse['redirect_url'] ?? null,
                     'qr_code_url' => $midtransResponse['qr_code_url'] ?? null,
                     'qris_acquirer' => $midtransResponse['acquirer'] ?? null,
@@ -509,6 +516,7 @@ class PaymentController extends Controller
             'transaction_id' => $transaction->transaction_id,
             'vehicle_type' => $transaction->vehicle_type,
             'vehicle_label' => $transaction->vehicle_type === 'car' ? 'Mobil' : 'Motor',
+            'license_plate' => $transaction->license_plate,
             'amount' => (float) $transaction->amount,
             'payment_status' => $transaction->payment_status,
             'payment_method' => $transaction->payment_method,
@@ -535,11 +543,12 @@ class PaymentController extends Controller
                 'transaction_id' => $transaction->id,
                 'type' => 'payment_success',
                 'title' => 'Pembayaran Berhasil',
-                'message' => "Pembayaran parkir {$transaction->vehicle_type} sebesar Rp " . number_format($transaction->amount, 0, ',', '.') . " berhasil diterima",
+                'message' => "Pembayaran parkir {$transaction->vehicle_type} {$transaction->license_plate} sebesar Rp " . number_format($transaction->amount, 0, ',', '.') . " berhasil diterima",
                 'data' => [
                     'transaction_id' => $transaction->transaction_id,
                     'amount' => $transaction->amount,
                     'vehicle_type' => $transaction->vehicle_type,
+                    'license_plate' => $transaction->license_plate,
                     'paid_at' => $transaction->paid_at,
                 ],
                 'created_at' => Carbon::now(),

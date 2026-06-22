@@ -42,12 +42,23 @@
 
             <!-- Generate Button -->
             <div class="mb-8">
+                <label for="license_plate" class="block text-sm font-medium text-gray-700 mb-2">Plat Nomor</label>
+                <input
+                    id="license_plate"
+                    type="text"
+                    x-model="form.license_plate"
+                    @input="form.license_plate = form.license_plate.toUpperCase()"
+                    maxlength="20"
+                    placeholder="Contoh: B 1234 ABC"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none uppercase mb-4"
+                    required
+                >
                 <button
                     @click="generateQR()"
-                    :disabled="!form.vehicle_type || isGenerating"
+                    :disabled="!form.vehicle_type || !form.license_plate.trim() || isGenerating"
                     class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center space-x-2"
                 >
-                    <span x-show="!isGenerating">Generate QR Code</span>
+                    <span x-show="!isGenerating">Cetak QR Code Pembayaran</span>
                     <span x-show="isGenerating" class="flex items-center space-x-2">
                         <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -96,6 +107,9 @@
 
                             <p class="text-sm text-gray-600 mt-3">Lokasi</p>
                             <p class="text-lg font-semibold text-gray-900" x-text="attendantInfo.street_section"></p>
+
+                            <p class="text-sm text-gray-600 mt-3">Plat Nomor</p>
+                            <p class="text-lg font-semibold text-gray-900" x-text="currentLicensePlate"></p>
                         </div>
 
                         <!-- Expiration Timer -->
@@ -214,6 +228,7 @@ function qrGenerator() {
     return {
         form: {
             vehicle_type: '',
+            license_plate: '',
         },
         rates: {
             motorcycle: 0,
@@ -222,6 +237,7 @@ function qrGenerator() {
         qrCode: null,
         qrCodeUrl: null,
         currentTransactionId: null,
+        currentLicensePlate: '',
         attendantInfo: {},
         isGenerating: false,
         isExpired: false,
@@ -324,6 +340,13 @@ function qrGenerator() {
                 return;
             }
 
+            this.form.license_plate = this.form.license_plate.trim().toUpperCase();
+
+            if (!this.form.license_plate) {
+                alert('Silakan isi plat nomor terlebih dahulu');
+                return;
+            }
+
             this.isGenerating = true;
             this.isExpired = false;
             this.paymentSuccessMessage = '';
@@ -349,6 +372,7 @@ function qrGenerator() {
                 this.qrCode = data.data?.qr_code || data.qr_code;
                 this.qrCodeUrl = data.data?.qr_code_url || data.qr_code_url || null;
                 this.currentTransactionId = data.data?.transaction_id || data.transaction_id || null;
+                this.currentLicensePlate = data.data?.license_plate || data.license_plate || this.form.license_plate;
 
                 // Start expiration timer
                 this.startExpirationTimer(data.data?.expires_at || data.expires_at);
@@ -475,6 +499,8 @@ function qrGenerator() {
         resetPaymentState() {
             this.paymentSuccessMessage = '';
             this.form.vehicle_type = '';
+            this.form.license_plate = '';
+            this.currentLicensePlate = '';
         },
 
         showNotificationAlert(notification) {

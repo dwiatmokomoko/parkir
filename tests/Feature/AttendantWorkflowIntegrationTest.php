@@ -41,6 +41,7 @@ class AttendantWorkflowIntegrationTest extends TestCase
         $response = $this->withHeaders(['Authorization' => "Bearer $token"])
             ->postJson('/api/payments/generate-qr', [
                 'vehicle_type' => 'motorcycle',
+                'license_plate' => 'B 1234 ABC',
                 'parking_attendant_id' => $this->attendant->id,
                 'street_section' => $this->attendant->street_section,
             ]);
@@ -190,6 +191,7 @@ class AttendantWorkflowIntegrationTest extends TestCase
         $response = $this->withHeaders(['Authorization' => "Bearer $token"])
             ->postJson('/api/payments/generate-qr', [
                 'vehicle_type' => 'motorcycle',
+                'license_plate' => 'B 1234 ABC',
                 'parking_attendant_id' => $this->attendant->id,
                 'street_section' => $this->attendant->street_section,
             ]);
@@ -197,12 +199,14 @@ class AttendantWorkflowIntegrationTest extends TestCase
         $response->assertStatus(200);
         $motorcycleTransaction = Transaction::where('transaction_id', $response->json('transaction_id'))->first();
         $this->assertEquals('motorcycle', $motorcycleTransaction->vehicle_type);
+        $this->assertEquals('B 1234 ABC', $motorcycleTransaction->license_plate);
         $this->assertEquals(2000, $motorcycleTransaction->amount);
 
         // Generate QR for car
         $response = $this->withHeaders(['Authorization' => "Bearer $token"])
             ->postJson('/api/payments/generate-qr', [
                 'vehicle_type' => 'car',
+                'license_plate' => 'B 5678 XYZ',
                 'parking_attendant_id' => $this->attendant->id,
                 'street_section' => $this->attendant->street_section,
             ]);
@@ -210,6 +214,7 @@ class AttendantWorkflowIntegrationTest extends TestCase
         $response->assertStatus(200);
         $carTransaction = Transaction::where('transaction_id', $response->json('transaction_id'))->first();
         $this->assertEquals('car', $carTransaction->vehicle_type);
+        $this->assertEquals('B 5678 XYZ', $carTransaction->license_plate);
         $this->assertEquals(5000, $carTransaction->amount);
     }
 }

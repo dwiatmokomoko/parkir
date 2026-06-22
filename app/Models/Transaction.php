@@ -19,6 +19,7 @@ class Transaction extends Model
         'parking_attendant_id',
         'street_section',
         'vehicle_type',
+        'license_plate',
         'amount',
         'payment_method',
         'payment_status',

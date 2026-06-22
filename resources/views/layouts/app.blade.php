@@ -38,9 +38,6 @@
                         <a href="{{ route('reports.index') }}" class="px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('reports.*') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100' }}">
                             Laporan
                         </a>
-                        <a href="{{ route('audit-logs.index') }}" class="px-3 py-2 rounded-md text-sm font-medium {{ request()->routeIs('audit-logs.*') ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100' }}">
-                            Audit
-                        </a>
                     </div>
 
                     <!-- User Menu -->

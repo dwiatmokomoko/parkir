@@ -35,6 +35,7 @@ class QRCodeService
             'parking_rate' => (float) $transaction->amount,
             'attendant_id' => $transaction->parking_attendant_id,
             'vehicle_type' => $transaction->vehicle_type,
+            'license_plate' => $transaction->license_plate,
             'street_section' => $transaction->street_section,
             'expires_at' => $expiresAt->toIso8601String(),
         ];

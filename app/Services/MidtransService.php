@@ -146,6 +146,7 @@ class MidtransService
             'transaction_id' => $transaction->transaction_id,
             'amount' => (int) $transaction->amount,
             'vehicle_type' => $transaction->vehicle_type,
+            'license_plate' => $transaction->license_plate,
         ]);
     }
 

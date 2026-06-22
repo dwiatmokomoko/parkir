@@ -84,6 +84,7 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Juru Parkir</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Lokasi</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Jenis Kendaraan</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Plat Nomor</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Jumlah</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Waktu</th>
@@ -97,6 +98,7 @@
                             <td class="px-6 py-4 text-sm text-gray-900" x-text="transaction.parking_attendant?.name || '-'"></td>
                             <td class="px-6 py-4 text-sm text-gray-900" x-text="transaction.street_section"></td>
                             <td class="px-6 py-4 text-sm text-gray-900" x-text="getVehicleLabel(transaction.vehicle_type)"></td>
+                            <td class="px-6 py-4 text-sm text-gray-900" x-text="transaction.license_plate || '-'"></td>
                             <td class="px-6 py-4 text-sm font-medium text-gray-900">
                                 Rp <span x-text="formatCurrency(transaction.amount)"></span>
                             </td>
@@ -168,6 +170,10 @@
                         <div>
                             <p class="text-sm text-gray-600">Jenis Kendaraan</p>
                             <p class="text-lg font-semibold text-gray-900" x-text="getVehicleLabel(selectedTransaction?.vehicle_type)"></p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Plat Nomor</p>
+                            <p class="text-lg font-semibold text-gray-900" x-text="selectedTransaction?.license_plate || '-'"></p>
                         </div>
                         <div>
                             <p class="text-sm text-gray-600">Jumlah</p>

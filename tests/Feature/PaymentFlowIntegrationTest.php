@@ -34,6 +34,7 @@ class PaymentFlowIntegrationTest extends TestCase
         // Step 1: Attendant generates QR code
         $response = $this->postJson('/api/payments/generate-qr', [
             'vehicle_type' => 'motorcycle',
+            'license_plate' => 'B 1234 ABC',
             'parking_attendant_id' => $this->attendant->id,
             'street_section' => $this->attendant->street_section,
         ]);
@@ -48,6 +49,7 @@ class PaymentFlowIntegrationTest extends TestCase
         $this->assertNotNull($transaction);
         $this->assertEquals('pending', $transaction->payment_status);
         $this->assertEquals('motorcycle', $transaction->vehicle_type);
+        $this->assertEquals('B 1234 ABC', $transaction->license_plate);
         $this->assertEquals(2000, $transaction->amount);
 
         // Step 2: Simulate Midtrans webhook callback for successful payment
@@ -121,6 +123,7 @@ class PaymentFlowIntegrationTest extends TestCase
         // Generate new QR code
         $response = $this->postJson('/api/payments/generate-qr', [
             'vehicle_type' => 'motorcycle',
+            'license_plate' => 'B 1234 ABC',
             'parking_attendant_id' => $this->attendant->id,
             'street_section' => $this->attendant->street_section,
         ]);
@@ -135,6 +138,7 @@ class PaymentFlowIntegrationTest extends TestCase
     {
         $response = $this->postJson('/api/payments/generate-qr', [
             'vehicle_type' => 'invalid_type',
+            'license_plate' => 'B 1234 ABC',
             'parking_attendant_id' => $this->attendant->id,
             'street_section' => $this->attendant->street_section,
         ]);
@@ -151,6 +155,7 @@ class PaymentFlowIntegrationTest extends TestCase
 
         $response = $this->postJson('/api/payments/generate-qr', [
             'vehicle_type' => 'motorcycle',
+            'license_plate' => 'B 1234 ABC',
             'parking_attendant_id' => $inactiveAttendant->id,
             'street_section' => $inactiveAttendant->street_section,
         ]);

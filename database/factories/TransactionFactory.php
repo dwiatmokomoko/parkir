@@ -28,6 +28,7 @@ class TransactionFactory extends Factory
             'parking_attendant_id' => ParkingAttendant::factory(),
             'street_section' => fake()->streetName(),
             'vehicle_type' => $vehicleType,
+            'license_plate' => strtoupper(fake()->bothify('? #### ??')),
             'amount' => $amount,
             'payment_method' => $paymentStatus === 'success' ? fake()->randomElement(['qris', 'gopay', 'ovo', 'dana']) : null,
             'payment_status' => $paymentStatus,

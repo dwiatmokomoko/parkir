@@ -212,7 +212,7 @@
 
     .history-filter-grid {
         display: grid;
-        grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+        grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
         gap: 12px;
         align-items: end;
     }
@@ -595,6 +595,7 @@
                     <tr>
                         <th>ID Transaksi</th>
                         <th>Kendaraan</th>
+                        <th>Plat Nomor</th>
                         <th>Jumlah</th>
                         <th>Status</th>
                         <th>Waktu</th>
@@ -605,6 +606,7 @@
                         <tr>
                             <td class="history-id" x-text="shortId(transaction.transaction_id)"></td>
                             <td x-text="transaction.vehicle_label"></td>
+                            <td x-text="transaction.license_plate || '-'"></td>
                             <td class="history-money" x-text="formatCurrency(transaction.amount)"></td>
                             <td>
                                 <span :class="statusClass(transaction.payment_status)" x-text="statusLabel(transaction.payment_status)"></span>
@@ -625,9 +627,12 @@
                     </div>
                     <div class="history-mobile-row">
                         <span x-text="transaction.vehicle_label"></span>
-                        <span class="history-money" x-text="formatCurrency(transaction.amount)"></span>
+                        <span x-text="transaction.license_plate || '-'"></span>
                     </div>
-                    <div style="color: var(--history-muted); font-size: 13px;" x-text="formatDate(transaction.created_at)"></div>
+                    <div class="history-mobile-row">
+                        <span class="history-money" x-text="formatCurrency(transaction.amount)"></span>
+                        <span style="color: var(--history-muted); font-size: 13px;" x-text="formatDate(transaction.created_at)"></span>
+                    </div>
                 </article>
             </template>
         </div>
