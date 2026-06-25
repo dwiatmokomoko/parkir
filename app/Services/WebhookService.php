@@ -63,7 +63,7 @@ class WebhookService
             'pending' => ['pending', 'success', 'failed', 'expired'],
             'success' => [], // Success is final
             'failed' => ['pending'], // Can retry
-            'expired' => ['pending'], // Can regenerate
+            'expired' => ['pending', 'success'], // Midtrans can settle after local QR expiry
         ];
 
         return in_array($newStatus, $validTransitions[$currentStatus] ?? []);

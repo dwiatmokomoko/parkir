@@ -105,7 +105,7 @@ class PaymentGatewayIntegrationTest extends TestCase
             ['midtrans' => 'pending', 'fraud' => null, 'expected' => 'pending'],
             ['midtrans' => 'deny', 'fraud' => null, 'expected' => 'failed'],
             ['midtrans' => 'cancel', 'fraud' => null, 'expected' => 'failed'],
-            ['midtrans' => 'expire', 'fraud' => null, 'expected' => 'failed'],
+            ['midtrans' => 'expire', 'fraud' => null, 'expected' => 'expired'],
             ['midtrans' => 'capture', 'fraud' => 'deny', 'expected' => 'failed'],
         ];
 
@@ -214,8 +214,10 @@ class PaymentGatewayIntegrationTest extends TestCase
             ['from' => 'pending', 'to' => 'success', 'expected' => true],
             ['from' => 'pending', 'to' => 'failed', 'expected' => true],
             ['from' => 'pending', 'to' => 'expired', 'expected' => true],
+            ['from' => 'pending', 'to' => 'pending', 'expected' => true],
             ['from' => 'failed', 'to' => 'pending', 'expected' => true],
             ['from' => 'expired', 'to' => 'pending', 'expected' => true],
+            ['from' => 'expired', 'to' => 'success', 'expected' => true],
         ];
 
         foreach ($validTransitions as $transition) {
@@ -231,7 +233,6 @@ class PaymentGatewayIntegrationTest extends TestCase
         $invalidTransitions = [
             ['from' => 'success', 'to' => 'pending', 'expected' => false],
             ['from' => 'success', 'to' => 'failed', 'expected' => false],
-            ['from' => 'pending', 'to' => 'pending', 'expected' => false],
         ];
 
         foreach ($invalidTransitions as $transition) {

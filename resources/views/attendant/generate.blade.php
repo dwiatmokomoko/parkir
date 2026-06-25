@@ -248,6 +248,9 @@ function qrGenerator() {
         showNotification: false,
         notificationMessage: '',
         paymentSuccessMessage: '',
+        seenNotificationIds: [],
+        notificationDismissTimers: {},
+        isFirstNotificationLoad: true,
         notificationPollInterval: null,
         paymentStatusInterval: null,
 
@@ -304,7 +307,7 @@ function qrGenerator() {
 
         async loadNotifications() {
             try {
-                const response = await fetch('/api/attendant/notifications', {
+                const response = await fetch('/api/attendant/notifications/unread', {
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     }
@@ -312,21 +315,80 @@ function qrGenerator() {
 
                 if (response.ok) {
                     const data = await response.json();
-                    const newNotifications = data.data || [];
+                    const newNotifications = (data.data || []).slice(0, 3);
 
-                    // Check for new notifications
-                    const previousCount = this.notifications.length;
+                    if (this.isFirstNotificationLoad && !this.currentTransactionId) {
+                        this.isFirstNotificationLoad = false;
+                        this.notifications = [];
+
+                        if (newNotifications.length > 0) {
+                            this.markAllNotificationsAsRead();
+                        }
+
+                        return;
+                    }
+
+                    this.isFirstNotificationLoad = false;
                     this.notifications = newNotifications;
 
-                    if (newNotifications.length > previousCount) {
-                        const latestNotification = newNotifications[0];
-                        this.showNotificationAlert(latestNotification);
-                        this.clearQrWhenNotificationMatches(latestNotification);
-                        this.playAudioAlert();
-                    }
+                    newNotifications.forEach((notification) => {
+                        if (!this.seenNotificationIds.includes(notification.id)) {
+                            this.seenNotificationIds.push(notification.id);
+                            this.showNotificationAlert(notification);
+                            this.clearQrWhenNotificationMatches(notification);
+                            this.playAudioAlert();
+                        }
+
+                        this.scheduleNotificationDismiss(notification);
+                    });
                 }
             } catch (error) {
                 console.error('Error loading notifications:', error);
+            }
+        },
+
+        scheduleNotificationDismiss(notification) {
+            if (!notification?.id || this.notificationDismissTimers[notification.id]) return;
+
+            this.notificationDismissTimers[notification.id] = setTimeout(() => {
+                this.dismissNotification(notification.id);
+            }, 12000);
+        },
+
+        async dismissNotification(notificationId) {
+            this.notifications = this.notifications.filter(notification => notification.id !== notificationId);
+
+            if (this.notificationDismissTimers[notificationId]) {
+                clearTimeout(this.notificationDismissTimers[notificationId]);
+                delete this.notificationDismissTimers[notificationId];
+            }
+
+            await this.markNotificationAsRead(notificationId);
+        },
+
+        async markNotificationAsRead(notificationId) {
+            try {
+                await fetch(`/api/attendant/notifications/${notificationId}/read`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    }
+                });
+            } catch (error) {
+                console.error('Error marking notification as read:', error);
+            }
+        },
+
+        async markAllNotificationsAsRead() {
+            try {
+                await fetch('/api/attendant/notifications/mark-all-read', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    }
+                });
+            } catch (error) {
+                console.error('Error marking notifications as read:', error);
             }
         },
 
@@ -554,6 +616,7 @@ function qrGenerator() {
             if (this.notificationPollInterval) {
                 clearInterval(this.notificationPollInterval);
             }
+            Object.values(this.notificationDismissTimers).forEach((timer) => clearTimeout(timer));
             this.stopPaymentStatusPolling();
         }
     }

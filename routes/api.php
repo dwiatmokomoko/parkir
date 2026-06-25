@@ -203,9 +203,9 @@ Route::prefix('attendant/notifications')->middleware('attendant')->group(functio
     // Get unread notifications
     Route::get('/unread', [NotificationController::class, 'getUnread']);
     
-    // Mark notification as read
-    Route::post('/{notificationId}/read', [NotificationController::class, 'markAsRead']);
-    
     // Mark all notifications as read
     Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+
+    // Mark notification as read
+    Route::post('/{notificationId}/read', [NotificationController::class, 'markAsRead']);
 });

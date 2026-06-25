@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
@@ -274,10 +275,7 @@ class PaymentController extends Controller
                     request()
                 );
 
-                // Trigger notification to attendant if successful
-                if ($newStatus === 'success') {
-                    $this->notifyAttendant($transaction);
-                }
+                // Success notifications are created by TransactionObserver.
             });
 
             return response()->json([
@@ -430,13 +428,16 @@ class PaymentController extends Controller
             ], 404);
         }
 
+        $transaction = $this->syncTransactionStatusFromMidtrans($transaction);
+
         if ($transaction->payment_status === 'pending' && $transaction->isExpired()) {
             $transaction->update(['payment_status' => 'expired']);
+            $transaction = $transaction->fresh();
         }
 
         return response()->json([
             'success' => true,
-            'data' => $this->formatAttendantTransaction($transaction->fresh()),
+            'data' => $this->formatAttendantTransaction($transaction),
         ]);
     }
 
@@ -476,6 +477,10 @@ class PaymentController extends Controller
 
         $transactions = $query->paginate($perPage);
 
+        collect($transactions->items())
+            ->filter(fn (Transaction $transaction) => in_array($transaction->payment_status, ['pending', 'expired'], true))
+            ->each(fn (Transaction $transaction) => $this->syncTransactionStatusFromMidtrans($transaction));
+
         $summaryBase = Transaction::where('parking_attendant_id', $attendant->id);
         $summary = [
             'total' => (clone $summaryBase)->count(),
@@ -489,7 +494,7 @@ class PaymentController extends Controller
         return response()->json([
             'success' => true,
             'data' => collect($transactions->items())
-                ->map(fn (Transaction $transaction) => $this->formatAttendantTransaction($transaction))
+                ->map(fn (Transaction $transaction) => $this->formatAttendantTransaction($transaction->fresh()))
                 ->values(),
             'summary' => $summary,
             'pagination' => [
@@ -530,6 +535,105 @@ class PaymentController extends Controller
     }
 
     /**
+     * Sync local transaction status from Midtrans when webhook delivery is delayed or missed.
+     */
+    protected function syncTransactionStatusFromMidtrans(Transaction $transaction): Transaction
+    {
+        if (!in_array($transaction->payment_status, ['pending', 'expired'], true)) {
+            return $transaction;
+        }
+
+        $cacheKey = "midtrans_status_sync_{$transaction->transaction_id}";
+
+        if (Cache::has($cacheKey)) {
+            return $transaction->fresh();
+        }
+
+        Cache::put($cacheKey, true, now()->addSeconds(15));
+
+        try {
+            $midtransStatus = $this->midtransService->getTransactionStatus($transaction->transaction_id);
+            $newStatus = $this->mapMidtransStatus(
+                $midtransStatus['transaction_status'] ?? '',
+                $midtransStatus['fraud_status'] ?? null
+            );
+
+            if ($newStatus === $transaction->payment_status || $newStatus === 'pending') {
+                return $transaction->fresh();
+            }
+
+            if (!$this->webhookService->isValidStatusTransition($transaction->payment_status, $newStatus)) {
+                Log::warning('Midtrans status sync ignored because transition is invalid', [
+                    'transaction_id' => $transaction->transaction_id,
+                    'current_status' => $transaction->payment_status,
+                    'midtrans_status' => $midtransStatus['transaction_status'] ?? null,
+                    'new_status' => $newStatus,
+                ]);
+
+                return $transaction->fresh();
+            }
+
+            $grossAmount = isset($midtransStatus['gross_amount']) ? (float) $midtransStatus['gross_amount'] : null;
+
+            if ($grossAmount !== null && !$this->midtransService->validateTransactionAmount($transaction, $grossAmount)) {
+                return $transaction->fresh();
+            }
+
+            DB::transaction(function () use ($transaction, $newStatus, $midtransStatus) {
+                $oldStatus = $transaction->payment_status;
+                $updateData = [
+                    'payment_status' => $newStatus,
+                ];
+
+                if ($newStatus === 'success') {
+                    $updateData['paid_at'] = !empty($midtransStatus['transaction_time'])
+                        ? Carbon::parse($midtransStatus['transaction_time'])
+                        : Carbon::now();
+                    $updateData['payment_method'] = $midtransStatus['payment_type'] ?? null;
+                } elseif ($newStatus === 'failed') {
+                    $updateData['failure_reason'] = $midtransStatus['transaction_status'] ?? 'Payment failed';
+                }
+
+                $transaction->update($updateData);
+
+                $this->auditLogger->log(
+                    'transaction_status_synced',
+                    [
+                        'entity_type' => 'transaction',
+                        'entity_id' => $transaction->id,
+                        'old_values' => ['payment_status' => $oldStatus],
+                        'new_values' => ['payment_status' => $newStatus],
+                    ],
+                    null,
+                    request()
+                );
+            });
+        } catch (\Exception $e) {
+            Log::warning('Unable to sync transaction status from Midtrans', [
+                'transaction_id' => $transaction->transaction_id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $transaction->fresh();
+    }
+
+    protected function mapMidtransStatus(string $transactionStatus, ?string $fraudStatus): string
+    {
+        if ($fraudStatus === 'deny') {
+            return 'failed';
+        }
+
+        return match ($transactionStatus) {
+            'capture', 'settlement' => 'success',
+            'pending' => 'pending',
+            'deny', 'cancel' => 'failed',
+            'expire' => 'expired',
+            default => 'pending',
+        };
+    }
+
+    /**
      * Notify attendant of successful payment
      *
      * @param Transaction $transaction
@@ -538,21 +642,26 @@ class PaymentController extends Controller
     protected function notifyAttendant(Transaction $transaction): void
     {
         try {
-            Notification::create([
-                'parking_attendant_id' => $transaction->parking_attendant_id,
-                'transaction_id' => $transaction->id,
-                'type' => 'payment_success',
-                'title' => 'Pembayaran Berhasil',
-                'message' => "Pembayaran parkir {$transaction->vehicle_type} {$transaction->license_plate} sebesar Rp " . number_format($transaction->amount, 0, ',', '.') . " berhasil diterima",
-                'data' => [
-                    'transaction_id' => $transaction->transaction_id,
-                    'amount' => $transaction->amount,
-                    'vehicle_type' => $transaction->vehicle_type,
-                    'license_plate' => $transaction->license_plate,
-                    'paid_at' => $transaction->paid_at,
+            Notification::firstOrCreate(
+                [
+                    'transaction_id' => $transaction->id,
+                    'type' => 'payment_success',
                 ],
-                'created_at' => Carbon::now(),
-            ]);
+                [
+                    'parking_attendant_id' => $transaction->parking_attendant_id,
+                    'title' => 'Pembayaran Berhasil',
+                    'message' => "Pembayaran parkir {$transaction->vehicle_type} {$transaction->license_plate} sebesar Rp " . number_format($transaction->amount, 0, ',', '.') . " berhasil diterima",
+                    'data' => [
+                        'transaction_id' => $transaction->transaction_id,
+                        'amount' => $transaction->amount,
+                        'vehicle_type' => $transaction->vehicle_type,
+                        'license_plate' => $transaction->license_plate,
+                        'paid_at' => $transaction->paid_at,
+                    ],
+                    'is_read' => false,
+                    'created_at' => Carbon::now(),
+                ]
+            );
 
             Log::info('Notification sent to attendant', [
                 'attendant_id' => $transaction->parking_attendant_id,

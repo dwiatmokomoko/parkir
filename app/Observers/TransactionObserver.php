@@ -114,21 +114,26 @@ class TransactionObserver
     {
         try {
             // Create notification for attendant
-            Notification::create([
-                'parking_attendant_id' => $transaction->parking_attendant_id,
-                'transaction_id' => $transaction->id,
-                'type' => 'payment_success',
-                'title' => 'Pembayaran Berhasil',
-                'message' => "Pembayaran parkir {$transaction->vehicle_type} {$transaction->license_plate} sebesar Rp " . number_format($transaction->amount, 0, ',', '.') . " berhasil diterima",
-                'data' => [
-                    'transaction_id' => $transaction->transaction_id,
-                    'amount' => $transaction->amount,
-                    'vehicle_type' => $transaction->vehicle_type,
-                    'license_plate' => $transaction->license_plate,
-                    'paid_at' => $transaction->paid_at,
+            Notification::firstOrCreate(
+                [
+                    'transaction_id' => $transaction->id,
+                    'type' => 'payment_success',
                 ],
-                'created_at' => Carbon::now(),
-            ]);
+                [
+                    'parking_attendant_id' => $transaction->parking_attendant_id,
+                    'title' => 'Pembayaran Berhasil',
+                    'message' => "Pembayaran parkir {$transaction->vehicle_type} {$transaction->license_plate} sebesar Rp " . number_format($transaction->amount, 0, ',', '.') . " berhasil diterima",
+                    'data' => [
+                        'transaction_id' => $transaction->transaction_id,
+                        'amount' => $transaction->amount,
+                        'vehicle_type' => $transaction->vehicle_type,
+                        'license_plate' => $transaction->license_plate,
+                        'paid_at' => $transaction->paid_at,
+                    ],
+                    'is_read' => false,
+                    'created_at' => Carbon::now(),
+                ]
+            );
 
             Log::info('Success notification created', [
                 'attendant_id' => $transaction->parking_attendant_id,
