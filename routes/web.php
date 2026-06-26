@@ -49,6 +49,10 @@ Route::middleware(['web'])->group(function () {
             return view('reports.index');
         })->name('reports.index');
 
+        Route::get('/system-flow', function () {
+            return view('system-flow.index');
+        })->name('system-flow.index');
+
         Route::get('/audit-logs', function () {
             return view('audit-logs.index');
         })->name('audit-logs.index');
